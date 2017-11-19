@@ -1,0 +1,3 @@
+-   **Chart Manager Controller Version:**
+-   **Kubernetes Version:**
+-   **Docker Version:**

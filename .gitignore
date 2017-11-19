@@ -1,0 +1,5 @@
+build
+coverage.txt
+run.sh
+notes.txt
+k8s-chart-manager-controller
