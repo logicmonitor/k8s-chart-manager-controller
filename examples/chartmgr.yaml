@@ -1,0 +1,33 @@
+apiVersion: logicmonitor.com/v1alpha1
+kind: ChartManager
+metadata:
+  name: test
+spec:
+  chart:
+    name: argus
+    version: "0.2.0"
+    repository:
+      name: lm1234
+      url: https://logicmonitor.github.com/k8s-helm-charts
+  values:
+    - name: global.accessID
+      value: test
+    - name: global.accessKey
+      value: test
+    - name: global.account
+      value: test
+    - name: clusterName
+      value: test
+    - name: collectorDescription
+      value: test
+    - name: collectorVersion
+      value: test
+
+---
+apiVersion: logicmonitor.com/v1alpha1
+kind: ChartManager
+metadata:
+  name: mysql
+spec:
+  chart:
+    name: mysql
