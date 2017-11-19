@@ -57,9 +57,12 @@ func CheckAllErrors(restResponse interface{}, apiResponse *logicmonitor.APIRespo
 
 // EnsureDirectory ensure that dir is a directory
 func EnsureDirectory(dir string) {
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
+	_, err := os.Stat(dir)
+	if os.IsNotExist(err) {
 		log.Debugf("Creating directory %s", dir)
-		os.MkdirAll(dir, 0744)
+		err = os.MkdirAll(dir, 0744)
+		if err != nil {
+			log.Warnf("%s", err)
+		}
 	}
-	return
 }

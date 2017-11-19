@@ -106,25 +106,23 @@ func (c *Controller) manage(ctx context.Context) error {
 
 func (c *Controller) addFunc(obj interface{}) {
 	chartmgr := obj.(*crv1alpha1.ChartManager)
-	rls, err := CreateOrUpdateChartMgr(
-		chartmgr,
-		c.Config,
-		c.HelmClient,
-		c.HelmSettings,
-		c.Clientset,
-	)
+	rls, err := CreateOrUpdateChartMgr(chartmgr, c.Config, c.HelmClient, c.HelmSettings)
 	rlsName := ""
 	if err != nil {
 		log.Errorf("Failed to create Chart Manager: %v", err)
 		if rls != nil {
 			rlsName = rls.Name
 		}
-		c.updateChartMgrStatus(chartmgr, crv1alpha1.ChartMgrStateFailed, rlsName, err.Error())
+		_, updterr := c.updateChartMgrStatus(chartmgr, crv1alpha1.ChartMgrStateFailed, rlsName, err.Error())
+		if updterr != nil {
+			log.Warnf("Failed to update Chart Manager: %v", updterr)
+			log.Errorf("Failed to create Chart Manager: %v", err)
+		}
 		return
 	}
 
 	status := getReleaseStatusName(rls)
-	chartmgrCopy, err := c.updateChartMgrStatus(chartmgr, status, rls.Name, string(status))
+	_, err = c.updateChartMgrStatus(chartmgr, status, rls.Name, string(status))
 	if err != nil {
 		log.Errorf("Failed to update Chart Manager status: %v", err)
 		return
@@ -140,7 +138,7 @@ func (c *Controller) addFunc(obj interface{}) {
 		chartmgr.Name, chartmgr.Spec.Chart.Version, rls.Name)
 
 	status = getReleaseStatusName(rls)
-	chartmgrCopy, err = c.updateChartMgrStatus(chartmgr, status, rls.Name, string(status))
+	chartmgrCopy, err := c.updateChartMgrStatus(chartmgr, status, rls.Name, string(status))
 	if err != nil {
 		log.Errorf("Failed to update Chart Manager status: %v", err)
 		return
@@ -154,13 +152,7 @@ func (c *Controller) updateFunc(oldObj, newObj interface{}) {
 	_ = oldObj.(*crv1alpha1.ChartManager)
 	newChartMgr := newObj.(*crv1alpha1.ChartManager)
 
-	_, err := CreateOrUpdateChartMgr(
-		newChartMgr,
-		c.Config,
-		c.HelmClient,
-		c.HelmSettings,
-		c.Clientset,
-	)
+	_, err := CreateOrUpdateChartMgr(newChartMgr, c.Config, c.HelmClient, c.HelmSettings)
 	if err != nil {
 		log.Errorf("Failed to update Chart Manager: %v", err)
 		return
@@ -172,10 +164,7 @@ func (c *Controller) updateFunc(oldObj, newObj interface{}) {
 func (c *Controller) deleteFunc(obj interface{}) {
 	chartmgr := obj.(*crv1alpha1.ChartManager)
 
-	if err := DeleteChartMgr(chartmgr,
-		c.Config,
-		c.HelmClient,
-		c.Clientset); err != nil {
+	if err := DeleteChartMgr(chartmgr, c.Config, c.HelmClient); err != nil {
 		log.Errorf("Failed to delete Chart Manager: %v", err)
 		return
 	}
@@ -249,12 +238,9 @@ func getReleaseStatusCode(rls *rspb.Release) rspb.Status_Code {
 	return rls.Info.Status.Code
 }
 
-func checkReleaseDeploymentStatus(rls *rspb.Release) bool {
+func releaseDeployed(rls *rspb.Release) bool {
 	status := getReleaseStatusCode(rls)
-	if status == rspb.Status_DEPLOYED {
-		return true
-	}
-	return false
+	return status == rspb.Status_DEPLOYED
 }
 
 // func checkReleaseDeletedStatus(rls *rspb.Release) bool {
@@ -267,15 +253,14 @@ func checkReleaseDeploymentStatus(rls *rspb.Release) bool {
 
 func waitForReleaseToDeploy(rls *rspb.Release) error {
 	timeout := time.After(2 * time.Minute)
-	tick := time.Tick(30 * time.Second)
+	ticker := time.NewTicker(30 * time.Second)
 
-	for {
+	for c := ticker.C; ; <-c {
 		select {
 		case <-timeout:
 			return errors.New("Timed out waiting for release to deploy")
-		case <-tick:
-			deployed := checkReleaseDeploymentStatus(rls)
-			if deployed {
+		default:
+			if releaseDeployed(rls) {
 				return nil
 			}
 		}

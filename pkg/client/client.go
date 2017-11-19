@@ -86,70 +86,7 @@ func (c *Client) CreateCustomResourceDefinition() (*apiextensionsv1beta1.CustomR
 				},
 				Kind: reflect.TypeOf(crv1alpha1.ChartManager{}).Name(),
 			},
-			Validation: &apiextensionsv1beta1.CustomResourceValidation{
-				OpenAPIV3Schema: &apiextensionsv1beta1.JSONSchemaProps{
-					Required: []string{
-						"spec",
-					},
-					Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
-						"spec": {
-							Required: []string{
-								"chart",
-							},
-							Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
-								"chart": {
-									Required: []string{
-										"name",
-									},
-									Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
-										"name": {
-											Type:      "string",
-											MinLength: func(i int64) *int64 { return &i }(1),
-										},
-										"repository": {
-											Required: []string{
-												"name",
-												"url",
-											},
-											Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
-												"name": {
-													Type:      "string",
-													MinLength: func(i int64) *int64 { return &i }(1),
-												},
-												"url": {
-													Type:    "string",
-													Pattern: constants.ValidateChartRepoURLPattern,
-												},
-											},
-										},
-									},
-								},
-								"values": {
-									Type: "array",
-									Items: &apiextensionsv1beta1.JSONSchemaPropsOrArray{
-										Schema: &apiextensionsv1beta1.JSONSchemaProps{
-											Required: []string{
-												"name",
-												"value",
-											},
-											Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
-												"name": {
-													Type:      "string",
-													MinLength: func(i int64) *int64 { return &i }(1),
-												},
-												"value": {
-													Type:      "string",
-													MinLength: func(i int64) *int64 { return &i }(1),
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			Validation: constants.ChartMgrValidationRules(),
 		},
 	}
 
@@ -161,31 +98,37 @@ func (c *Client) CreateCustomResourceDefinition() (*apiextensionsv1beta1.CustomR
 
 	log.Infof("Creating CRD %s", crdName)
 	_, err = c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
-	if err != nil && strings.Contains(err.Error(), "already exists") == true {
-		log.Debugf("Updating CRD %s", crdName)
-		crd, err = c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crdName, metav1.GetOptions{})
-		if err != nil {
-			return nil, err
+	if err != nil {
+		if strings.Contains(err.Error(), "already exists") {
+			return c.updateCustomResourceDefinition(crdName)
 		}
-		_, err = c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Update(crd)
-		if err != nil {
-			return nil, err
-		}
-	} else if err != nil {
 		return nil, err
 	}
 
+	err = c.waitForCRD(crdName)
+	if err != nil {
+		log.Errorf("Error creating CRD %v", err)
+		deleteErr := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(crdName, nil)
+		if deleteErr != nil {
+			return nil, errors.NewAggregate([]error{err, deleteErr})
+		}
+	}
+	log.Debugf("Created CRD")
+	return crd, nil
+}
+
+func (c *Client) waitForCRD(crdName string) error {
 	// wait for CRD being established
-	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-		crd, err = c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crdName, metav1.GetOptions{})
+	err := wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
+		crd, err := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crdName, metav1.GetOptions{})
 		if err != nil {
-			return false, err
+			return true, err
 		}
 		for _, cond := range crd.Status.Conditions {
 			switch cond.Type {
 			case apiextensionsv1beta1.Established:
 				if cond.Status == apiextensionsv1beta1.ConditionTrue {
-					return true, err
+					return false, err
 				}
 			case apiextensionsv1beta1.NamesAccepted:
 				if cond.Status == apiextensionsv1beta1.ConditionFalse {
@@ -193,17 +136,29 @@ func (c *Client) CreateCustomResourceDefinition() (*apiextensionsv1beta1.CustomR
 				}
 			}
 		}
-		return false, err
+		return true, err
 	})
+	return err
+}
+
+func (c *Client) updateCustomResourceDefinition(crdName string) (*apiextensionsv1beta1.CustomResourceDefinition, error) {
+	log.Warnf("CRD already %s exists. Attempting to update.", crdName)
+	crd, err := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crdName, metav1.GetOptions{})
 	if err != nil {
-		log.Errorf("Error creating CRD %v", err)
-		deleteErr := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(crdName, nil)
-		if deleteErr != nil {
-			return nil, errors.NewAggregate([]error{err, deleteErr})
-		}
 		return nil, err
 	}
 
-	log.Debugf("Created CRD")
+	log.Debugf("Updating CRD %s", crdName)
+	_, err = c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Update(crd)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.waitForCRD(crdName)
+	if err != nil {
+		return crd, err
+	}
+
+	log.Debugf("Updated CRD %s", crdName)
 	return crd, nil
 }

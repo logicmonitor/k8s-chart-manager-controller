@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ghodss/yaml"
 	crv1alpha1 "github.com/logicmonitor/k8s-chart-manager-controller/pkg/apis/v1alpha1"
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/config"
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/constants"
@@ -20,10 +21,10 @@ import (
 	helm_env "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/helmpath"
 	"k8s.io/helm/pkg/helm/portforwarder"
-	"k8s.io/helm/pkg/kube"
 	"k8s.io/helm/pkg/proto/hapi/chart"
 	rspb "k8s.io/helm/pkg/proto/hapi/release"
 	"k8s.io/helm/pkg/repo"
+	"k8s.io/helm/pkg/strvals"
 )
 
 func newHelmClient(config *rest.Config, settings helm_env.EnvSettings) (*helm.Client, error) {
@@ -56,28 +57,13 @@ func getHelmSettings(chartmgrconfig *config.Config) helm_env.EnvSettings {
 	return settings
 }
 
-// configForContext creates a Kubernetes REST client configuration for a given kubeconfig context.
-func configForContext(context string) (*rest.Config, error) {
-	log.Debugf("Creating kubernetes client config")
-	kconfig, err := kube.GetConfig(context).ClientConfig()
-	if err != nil {
-		return nil, fmt.Errorf("could not get Kubernetes config for context %q: %s", context, err)
-	}
-	log.Debugf("Created kubernetes client config")
-	return kconfig, nil
-}
-
 func helmInit(settings helm_env.EnvSettings) error {
 	err := ensureDirectories(settings.Home)
 	if err != nil {
 		return err
 	}
 
-	err = ensureDefaultRepos(settings.Home, settings, false)
-	if err != nil {
-		return err
-	}
-	return nil
+	return ensureDefaultRepos(settings)
 }
 
 func ensureDirectories(home helmpath.Home) error {
@@ -101,9 +87,9 @@ func ensureDirectories(home helmpath.Home) error {
 	return nil
 }
 
-func ensureDefaultRepos(home helmpath.Home, settings helm_env.EnvSettings, skipRefresh bool) error {
+func ensureDefaultRepos(settings helm_env.EnvSettings) error {
 	log.Debugf("Initializing stable repo %s", constants.HelmStableRepo)
-	_, err := initStableRepo(settings)
+	err := initStableRepo(settings)
 	if err != nil {
 		return err
 	}
@@ -111,15 +97,15 @@ func ensureDefaultRepos(home helmpath.Home, settings helm_env.EnvSettings, skipR
 	return nil
 }
 
-func initStableRepo(settings helm_env.EnvSettings) (*repo.Entry, error) {
-	c, err := addRepo(constants.HelmStableRepo, constants.HelmStableRepoURL, settings)
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
+func initStableRepo(settings helm_env.EnvSettings) error {
+	return addRepo(constants.HelmStableRepo, constants.HelmStableRepoURL, settings)
 }
 
-func addRepo(name string, url string, settings helm_env.EnvSettings) (*repo.Entry, error) {
+func addRepo(name string, url string, settings helm_env.EnvSettings) error {
+	if url == "" {
+		return nil
+	}
+
 	repoFile := settings.Home.RepositoryFile()
 
 	log.Debugf("Creating entry for repository %s", name)
@@ -133,14 +119,14 @@ func addRepo(name string, url string, settings helm_env.EnvSettings) (*repo.Entr
 	log.Debugf("Creating chart repository %s from %s", name, url)
 	r, err := repo.NewChartRepository(&c, getter.All(settings))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	log.Debugf("Created chart repository %s from %s", name, url)
 
 	log.Debugf("Downloading index file to %s", settings.Home.Cache())
 	err = r.DownloadIndexFile("")
 	if err != nil {
-		return nil, err
+		return err
 	}
 	log.Debugf("Downloaded index file to %s", settings.Home.Cache())
 
@@ -150,7 +136,7 @@ func addRepo(name string, url string, settings helm_env.EnvSettings) (*repo.Entr
 		log.Debugf("Loading repositories from %s", settings.Home.RepositoryFile())
 		f, lerr := repo.LoadRepositoriesFile(settings.Home.RepositoryFile())
 		if lerr != nil {
-			return nil, lerr
+			return lerr
 		}
 		log.Debugf("Loaded repositories from %s", settings.Home.RepositoryFile())
 
@@ -161,7 +147,7 @@ func addRepo(name string, url string, settings helm_env.EnvSettings) (*repo.Entr
 		log.Debugf("Writing repository file %s", settings.Home.RepositoryFile())
 		err = f.WriteFile(settings.Home.RepositoryFile(), 0644)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		log.Debugf("Wrote repository file %s", settings.Home.RepositoryFile())
 	} else {
@@ -173,18 +159,25 @@ func addRepo(name string, url string, settings helm_env.EnvSettings) (*repo.Entr
 		log.Debugf("Writing repository file %s", settings.Home.RepositoryFile())
 		err = f.WriteFile(settings.Home.RepositoryFile(), 0644)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		log.Debugf("Wrote repository file %s", settings.Home.RepositoryFile())
 	}
-	return &c, nil
+	return nil
 }
 
-func getChart(name string, version string, url string, settings helm_env.EnvSettings) (*chart.Chart, error) {
-	name = strings.TrimSpace(name)
-	version = strings.TrimSpace(version)
+func getChart(chartmgr *crv1alpha1.ChartManager, settings helm_env.EnvSettings) (*chart.Chart, error) {
+	name := chartmgr.Spec.Chart.Name
+	repoName := parseRepoName(chartmgr)
+	url := parseRepoURL(chartmgr)
+	version := parseVersion(chartmgr)
 
-	if url == "" {
+	if url != "" {
+		err := addRepo(repoName, url, settings)
+		if err != nil {
+			return nil, err
+		}
+	} else {
 		url = constants.HelmStableRepoURL
 	}
 
@@ -320,9 +313,11 @@ func updateRelease(chartmgr *crv1alpha1.ChartManager,
 	return rsp.Release, nil
 }
 
-func deleteRelease(chartmgrconfig *config.Config,
-	helmClient *helm.Client,
-	rlsName string) error {
+func deleteRelease(chartmgrconfig *config.Config, rlsName string, helmClient *helm.Client) error {
+	if rlsName == "" {
+		return nil
+	}
+
 	log.Infof("Deleting release %s", rlsName)
 
 	delOps := []helm.DeleteOption{
@@ -338,7 +333,7 @@ func deleteRelease(chartmgrconfig *config.Config,
 	return nil
 }
 
-func getSingleRelease(helmClient *helm.Client, rlsFilter string) (string, error) {
+func getSingleReleaseName(helmClient *helm.Client, rlsFilter string) (string, error) {
 	// try to list the release and determine if it already exists
 	log.Debugf("Attempting to locate helm release with filter %s", rlsFilter)
 
@@ -368,4 +363,77 @@ func getSingleRelease(helmClient *helm.Client, rlsFilter string) (string, error)
 	}
 	log.Debugf("Found helm release matching filter %s", rlsFilter)
 	return listRsp.Releases[0].Name, nil
+}
+
+func parseVersion(chartmgr *crv1alpha1.ChartManager) string {
+	version := ""
+	if chartmgr.Spec.Chart.Version != "" {
+		version = chartmgr.Spec.Chart.Version
+	}
+	return version
+}
+
+func parseRepoURL(chartmgr *crv1alpha1.ChartManager) string {
+	repoURL := ""
+	if chartmgr.Spec.Chart.Repository != nil {
+		repoURL = chartmgr.Spec.Chart.Repository.URL
+	}
+	return repoURL
+}
+
+func parseRepoName(chartmgr *crv1alpha1.ChartManager) string {
+	repoName := ""
+	if chartmgr.Spec.Chart.Repository != nil {
+		repoName = chartmgr.Spec.Chart.Repository.Name
+	}
+	return repoName
+}
+
+func getReleaseName(chartmgr *crv1alpha1.ChartManager) string {
+	// releases created by the controller are formatted:
+	// chartmgr-rls-[chartmgr uid]
+	uid := chartmgr.ObjectMeta.UID
+
+	rlsName := fmt.Sprintf("%s-%s", constants.ReleaseNamePrefix, uid)
+	log.Debugf("Generated release name %s", rlsName)
+
+	return rlsName
+}
+
+func parseValues(chartmgr *crv1alpha1.ChartManager) ([]byte, error) {
+	log.Debugf("Parsing values")
+	base := map[string]interface{}{}
+	vals := []string{}
+
+	// iterate our name value pair and format as string
+	for _, value := range chartmgr.Spec.Values {
+		log.Debugf("Parsing value %s", value.Name)
+		if !validateValue(value) {
+			log.Errorf("Error parsing value %v. Continuing.", value)
+			continue
+		}
+		vals = append(vals, fmt.Sprintf("%s=%s", value.Name, value.Value))
+	}
+
+	// join k/v string and parse
+	v := strings.Join(vals[:], ",")
+	err := strvals.ParseInto(v, base)
+	if err != nil {
+		return nil, err
+	}
+
+	y, err := yaml.Marshal(base)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debugf("Parsed values")
+	return y, nil
+}
+
+func validateValue(value *crv1alpha1.ChartMgrValuePair) bool {
+	// placeholder.
+	// basic type and required field validation is done at the CRD level.
+	// no additional validation to be done at this time.
+	return true
 }
