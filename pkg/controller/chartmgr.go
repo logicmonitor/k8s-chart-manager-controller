@@ -46,7 +46,7 @@ func CreateOrUpdateChartMgr(
 	// with the chartmgr.
 	if &chartmgr.Status != nil && chartmgr.Status.ReleaseName != "" && chartmgr.Status.ReleaseName != rlsName {
 		log.Warnf("Calculated release name %s does not match stored release %s", rlsName, chartmgr.Status.ReleaseName)
-		n, err := getSingleRelease(helmClient, chartmgr.Status.ReleaseName)
+		n, _ := getSingleRelease(helmClient, chartmgr.Status.ReleaseName)
 		if n != "" {
 			err = deleteRelease(chartmgrconfig, helmClient, n)
 			if err != nil {
@@ -64,11 +64,10 @@ func CreateOrUpdateChartMgr(
 	// if there's already a release for this chartmgr, do an upgrade.
 	if foundRlsName != "" {
 		log.Infof("Release %s found. Updating.", rlsName)
-		rls, err := updateRelease(chartmgr, chartmgrconfig, helmClient, rlsName, chart)
-		if err != nil {
-			if rls != nil {
-				return rls, err
-			}
+		rls, rlserr := updateRelease(chartmgr, chartmgrconfig, helmClient, rlsName, chart)
+		if err != nil && rls != nil {
+			return rls, err
+		} else if err != nil {
 			return nil, err
 		}
 		return rls, nil
@@ -76,10 +75,9 @@ func CreateOrUpdateChartMgr(
 
 	log.Infof("Release %s not found. Installing.", rlsName)
 	rls, err := installRelease(chartmgr, chartmgrconfig, helmClient, rlsName, chart)
-	if err != nil {
-		if rls != nil {
-			return rls, err
-		}
+	if err != nil && rls != nil {
+		return rls, err
+	} else if err != nil {
 		return nil, err
 	}
 	return rls, nil
@@ -97,9 +95,9 @@ func DeleteChartMgr(chartmgr *crv1alpha1.ChartManager,
 	}
 
 	if rlsName != "" {
-		err := deleteRelease(chartmgrconfig, helmClient, rlsName)
-		if err != nil {
-			return err
+		delerr := deleteRelease(chartmgrconfig, helmClient, rlsName)
+		if delerr != nil {
+			return delerr
 		}
 		return nil
 	}
@@ -126,28 +124,12 @@ func parseVersion(chartmgr *crv1alpha1.ChartManager) string {
 	return version
 }
 
-func parseReleaseVersion(chartmgr *crv1alpha1.ChartManager) string {
-	version := parseVersion(chartmgr)
-	if version == "" {
-		version = "latest"
-	}
-	return version
-}
-
 func parseRepoURL(chartmgr *crv1alpha1.ChartManager) string {
 	repoURL := ""
 	if chartmgr.Spec.Chart.Repository != nil {
 		repoURL = chartmgr.Spec.Chart.Repository.URL
 	}
 	return repoURL
-}
-
-func parseRepoName(chartmgr *crv1alpha1.ChartManager) string {
-	repoName := ""
-	if chartmgr.Spec.Chart.Repository != nil {
-		repoName = chartmgr.Spec.Chart.Repository.Name
-	}
-	return repoName
 }
 
 func parseValues(chartmgr *crv1alpha1.ChartManager) ([]byte, error) {

@@ -68,7 +68,7 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-  log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.DebugLevel)
 	RootCmd.AddCommand(manageCmd)
 
 	// Here you will define your flags and configuration settings.

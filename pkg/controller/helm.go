@@ -12,7 +12,6 @@ import (
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/utilities"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
-	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/downloader"
@@ -57,30 +56,15 @@ func getHelmSettings(chartmgrconfig *config.Config) helm_env.EnvSettings {
 	return settings
 }
 
-// getKubeClient creates a Kubernetes config and client for a given kubeconfig context.
-func getKubeClient(context string) (*rest.Config, clientset.Interface, error) {
-	config, err := configForContext(context)
-	if err != nil {
-		return nil, nil, err
-	}
-	log.Debugf("Creating kubernetes client")
-	client, err := clientset.NewForConfig(config)
-	if err != nil {
-		return nil, nil, err
-	}
-	log.Debugf("Created kubernetes client")
-	return config, client, nil
-}
-
 // configForContext creates a Kubernetes REST client configuration for a given kubeconfig context.
 func configForContext(context string) (*rest.Config, error) {
 	log.Debugf("Creating kubernetes client config")
-	config, err := kube.GetConfig(context).ClientConfig()
+	kconfig, err := kube.GetConfig(context).ClientConfig()
 	if err != nil {
 		return nil, fmt.Errorf("could not get Kubernetes config for context %q: %s", context, err)
 	}
 	log.Debugf("Created kubernetes client config")
-	return config, nil
+	return kconfig, nil
 }
 
 func helmInit(settings helm_env.EnvSettings) error {
@@ -164,9 +148,9 @@ func addRepo(name string, url string, settings helm_env.EnvSettings) (*repo.Entr
 	_, err = os.Stat(repoFile)
 	if err == nil {
 		log.Debugf("Loading repositories from %s", settings.Home.RepositoryFile())
-		f, err := repo.LoadRepositoriesFile(settings.Home.RepositoryFile())
-		if err != nil {
-			return nil, err
+		f, lerr := repo.LoadRepositoriesFile(settings.Home.RepositoryFile())
+		if lerr != nil {
+			return nil, lerr
 		}
 		log.Debugf("Loaded repositories from %s", settings.Home.RepositoryFile())
 
@@ -380,7 +364,7 @@ func getSingleRelease(helmClient *helm.Client, rlsFilter string) (string, error)
 		return "", nil
 	} else if listRsp.Count > 1 {
 		log.Warnf("Found multiple helm releases matching filter %s", rlsFilter)
-		return "", fmt.Errorf("Multiple releases found for this Chart Manager. Failing.")
+		return "", fmt.Errorf("multiple releases found for this Chart Manager")
 	}
 	log.Debugf("Found helm release matching filter %s", rlsFilter)
 	return listRsp.Releases[0].Name, nil

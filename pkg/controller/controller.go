@@ -257,13 +257,13 @@ func checkReleaseDeploymentStatus(rls *rspb.Release) bool {
 	return false
 }
 
-func checkReleaseDeletedStatus(rls *rspb.Release) bool {
-	status := getReleaseStatusCode(rls)
-	if status == rspb.Status_DELETED {
-		return true
-	}
-	return false
-}
+// func checkReleaseDeletedStatus(rls *rspb.Release) bool {
+// 	status := getReleaseStatusCode(rls)
+// 	if status == rspb.Status_DELETED {
+// 		return true
+// 	}
+// 	return false
+// }
 
 func waitForReleaseToDeploy(rls *rspb.Release) error {
 	timeout := time.After(2 * time.Minute)
@@ -282,19 +282,19 @@ func waitForReleaseToDeploy(rls *rspb.Release) error {
 	}
 }
 
-func waitForReleaseToDelete(rls *rspb.Release) error {
-	timeout := time.After(2 * time.Minute)
-	tick := time.Tick(30 * time.Second)
-
-	for {
-		select {
-		case <-timeout:
-			return errors.New("Timed out waiting for release to delete")
-		case <-tick:
-			deleted := checkReleaseDeletedStatus(rls)
-			if deleted {
-				return nil
-			}
-		}
-	}
-}
+// func waitForReleaseToDelete(rls *rspb.Release) error {
+// 	timeout := time.After(2 * time.Minute)
+// 	tick := time.Tick(30 * time.Second)
+//
+// 	for {
+// 		select {
+// 		case <-timeout:
+// 			return errors.New("Timed out waiting for release to delete")
+// 		case <-tick:
+// 			deleted := checkReleaseDeletedStatus(rls)
+// 			if deleted {
+// 				return nil
+// 			}
+// 		}
+// 	}
+// }

@@ -92,31 +92,31 @@ func (c *Client) CreateCustomResourceDefinition() (*apiextensionsv1beta1.CustomR
 						"spec",
 					},
 					Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
-						"spec": apiextensionsv1beta1.JSONSchemaProps{
+						"spec": {
 							Required: []string{
 								"chart",
 							},
 							Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
-								"chart": apiextensionsv1beta1.JSONSchemaProps{
+								"chart": {
 									Required: []string{
 										"name",
 									},
 									Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
-										"name": apiextensionsv1beta1.JSONSchemaProps{
+										"name": {
 											Type:      "string",
 											MinLength: func(i int64) *int64 { return &i }(1),
 										},
-										"repository": apiextensionsv1beta1.JSONSchemaProps{
+										"repository": {
 											Required: []string{
 												"name",
 												"url",
 											},
 											Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
-												"name": apiextensionsv1beta1.JSONSchemaProps{
+												"name": {
 													Type:      "string",
 													MinLength: func(i int64) *int64 { return &i }(1),
 												},
-												"url": apiextensionsv1beta1.JSONSchemaProps{
+												"url": {
 													Type:    "string",
 													Pattern: constants.ValidateChartRepoURLPattern,
 												},
@@ -124,7 +124,7 @@ func (c *Client) CreateCustomResourceDefinition() (*apiextensionsv1beta1.CustomR
 										},
 									},
 								},
-								"values": apiextensionsv1beta1.JSONSchemaProps{
+								"values": {
 									Type: "array",
 									Items: &apiextensionsv1beta1.JSONSchemaPropsOrArray{
 										Schema: &apiextensionsv1beta1.JSONSchemaProps{
@@ -133,11 +133,11 @@ func (c *Client) CreateCustomResourceDefinition() (*apiextensionsv1beta1.CustomR
 												"value",
 											},
 											Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
-												"name": apiextensionsv1beta1.JSONSchemaProps{
+												"name": {
 													Type:      "string",
 													MinLength: func(i int64) *int64 { return &i }(1),
 												},
-												"value": apiextensionsv1beta1.JSONSchemaProps{
+												"value": {
 													Type:      "string",
 													MinLength: func(i int64) *int64 { return &i }(1),
 												},
@@ -161,11 +161,7 @@ func (c *Client) CreateCustomResourceDefinition() (*apiextensionsv1beta1.CustomR
 
 	log.Infof("Creating CRD %s", crdName)
 	_, err = c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
-	if err != nil {
-		if strings.Contains(err.Error(), "already exists") != true {
-			return nil, err
-		}
-
+	if err != nil && strings.Contains(err.Error(), "already exists") == true {
 		log.Debugf("Updating CRD %s", crdName)
 		crd, err = c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crdName, metav1.GetOptions{})
 		if err != nil {
@@ -175,6 +171,8 @@ func (c *Client) CreateCustomResourceDefinition() (*apiextensionsv1beta1.CustomR
 		if err != nil {
 			return nil, err
 		}
+	} else if err != nil {
+		return nil, err
 	}
 
 	// wait for CRD being established
