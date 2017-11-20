@@ -1,0 +1,21 @@
+apiVersion: logicmonitor.com/v1alpha1
+kind: ChartManager
+metadata:
+  name: badargus
+spec:
+  chart:
+    name: argus
+    repository:
+      url: ttps://logicmonitor.github.com/k8s-helm-charts
+  values:
+    - name: collectorVersion
+
+---
+apiVersion: logicmonitor.com/v1alpha1
+kind: ChartManager
+metadata:
+  name: badmysql
+spec:
+  values:
+    - name: test value
+      value: value
