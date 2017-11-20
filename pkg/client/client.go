@@ -107,11 +107,12 @@ func (c *Client) CreateCustomResourceDefinition() (*apiextensionsv1beta1.CustomR
 
 	err = c.waitForCRD(crdName)
 	if err != nil {
-		log.Errorf("Error creating CRD %v", err)
+		log.Errorf("Error creating CRD: %v", err)
 		deleteErr := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(crdName, nil)
 		if deleteErr != nil {
 			return nil, errors.NewAggregate([]error{err, deleteErr})
 		}
+		return nil, err
 	}
 	log.Debugf("Created CRD")
 	return crd, nil
@@ -122,21 +123,21 @@ func (c *Client) waitForCRD(crdName string) error {
 	err := wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
 		crd, err := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crdName, metav1.GetOptions{})
 		if err != nil {
-			return true, err
+			return false, err
 		}
 		for _, cond := range crd.Status.Conditions {
 			switch cond.Type {
 			case apiextensionsv1beta1.Established:
 				if cond.Status == apiextensionsv1beta1.ConditionTrue {
-					return false, err
+					return true, err
 				}
 			case apiextensionsv1beta1.NamesAccepted:
 				if cond.Status == apiextensionsv1beta1.ConditionFalse {
-					fmt.Printf("Name conflict: %v\n", cond.Reason)
+					fmt.Warnf("Name conflict: %v\n", cond.Reason)
 				}
 			}
 		}
-		return true, err
+		return false, err
 	})
 	return err
 }
