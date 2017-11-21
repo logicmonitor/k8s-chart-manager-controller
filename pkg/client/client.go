@@ -2,7 +2,6 @@ package client
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -133,7 +132,7 @@ func (c *Client) waitForCRD(crdName string) error {
 				}
 			case apiextensionsv1beta1.NamesAccepted:
 				if cond.Status == apiextensionsv1beta1.ConditionFalse {
-					fmt.Warnf("Name conflict: %v\n", cond.Reason)
+					log.Warnf("Name conflict: %v\n", cond.Reason)
 				}
 			}
 		}
