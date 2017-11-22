@@ -9,6 +9,8 @@ spec:
       url: ttps://logicmonitor.github.com/k8s-helm-charts
   values:
     - name: collectorVersion
+  options:
+    createOnly: pickles
 
 ---
 apiVersion: logicmonitor.com/v1alpha1

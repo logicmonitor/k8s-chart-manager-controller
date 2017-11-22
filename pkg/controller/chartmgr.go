@@ -33,22 +33,33 @@ func CreateOrUpdateChartMgr(
 		return nil, err
 	}
 
-	if rlsExists {
-		// if there's already a release for this chartmgr, do an upgrade.
-		log.Infof("Release %s found. Updating.", rlsName)
-		return updateRelease(chartmgr, chartmgrconfig, helmClient, rlsName, chart)
+	if !rlsExists {
+		log.Infof("Release %s not found. Installing.", rlsName)
+		return installRelease(chartmgr, chartmgrconfig, helmClient, rlsName, chart)
 	}
 
-	log.Infof("Release %s not found. Installing.", rlsName)
-	return installRelease(chartmgr, chartmgrconfig, helmClient, rlsName, chart)
+	if createOnly(chartmgr) {
+		log.Infof("CreateOnly mode. Ignoring update of chart %s.", rlsName)
+		return nil, nil
+	}
+
+	// if there's already a release for this chartmgr, do an upgrade.
+	log.Infof("Release %s found. Updating.", rlsName)
+	return updateRelease(chartmgr, chartmgrconfig, helmClient, rlsName, chart)
+
 }
 
-// DeleteChartMgr deletes aChart Manager
+// DeleteChartMgr deletes a Chart Manager
 func DeleteChartMgr(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client) error {
 
 	rlsName, err := getSingleReleaseName(helmClient, string(chartmgr.ObjectMeta.UID))
 	if err != nil {
 		return err
+	}
+
+	if createOnly(chartmgr) {
+		log.Infof("CreateOnly mode. Ignoring delete of chart %s.", rlsName)
+		return nil
 	}
 
 	if rlsName != "" {
@@ -97,4 +108,11 @@ func rlsNameExists(helmClient *helm.Client, rlsName string) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func createOnly(chartmgr *crv1alpha1.ChartManager) bool {
+	if chartmgr.Spec.Options != nil && chartmgr.Spec.Options.CreateOnly {
+		return true
+	}
+	return false
 }

@@ -46,8 +46,14 @@ type ChartManager struct {
 
 // ChartMgrSpec represents the chartmgr controller's spec.
 type ChartMgrSpec struct {
-	Chart  *ChartMgrChart       `json:"chart,omitempty"`
-	Values []*ChartMgrValuePair `json:"values,omitempty"`
+	Chart   *ChartMgrChart       `json:"chart,omitempty"`
+	Options *ChartMgrOptions     `json:"options,omitempty"`
+	Values  []*ChartMgrValuePair `json:"values,omitempty"`
+}
+
+// ChartMgrOptions represents the chartmgr configuration options
+type ChartMgrOptions struct {
+	CreateOnly bool `json:"createOnly,omitempty"`
 }
 
 // ChartMgrChart represents the chartmgr controller's chart definition

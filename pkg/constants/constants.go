@@ -94,6 +94,13 @@ func ChartMgrValidationRules() *apiextensionsv1beta1.CustomResourceValidation {
 								},
 							},
 						},
+						"options": {
+							Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
+								"createOnly": {
+									Type: "boolean",
+								},
+							},
+						},
 					},
 				},
 			},

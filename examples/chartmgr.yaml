@@ -18,10 +18,6 @@ spec:
       value: test
     - name: clusterName
       value: test
-    - name: collectorDescription
-      value: test
-    - name: collectorVersion
-      value: test
 
 ---
 apiVersion: logicmonitor.com/v1alpha1
@@ -31,3 +27,5 @@ metadata:
 spec:
   chart:
     name: mysql
+  options:
+    createOnly: true
