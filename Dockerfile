@@ -32,13 +32,13 @@ COPY --from=codegen $GOPATH/src/github.com/logicmonitor/k8s-chart-manager-contro
 ARG VERSION
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o /chart-manager-controller -ldflags "-X \"github.com/logicmonitor/k8s-chart-manager-controller/pkg/constants.Version=${VERSION}\""
 
-# FROM golang:1.9 as test
-# WORKDIR $GOPATH/src/github.com/logicmonitor/k8s-chart-manager-controller
-# RUN go get -u github.com/alecthomas/gometalinter
-# RUN gometalinter --install
-# COPY --from=build $GOPATH/src/github.com/logicmonitor/k8s-chart-manager-controller ./
-# RUN chmod +x ./scripts/test.sh; sync; ./scripts/test.sh
-# RUN cp coverage.txt /coverage.txt
+FROM golang:1.9 as test
+WORKDIR $GOPATH/src/github.com/logicmonitor/k8s-chart-manager-controller
+RUN go get -u github.com/alecthomas/gometalinter
+RUN gometalinter --install
+COPY --from=build $GOPATH/src/github.com/logicmonitor/k8s-chart-manager-controller ./
+RUN chmod +x ./scripts/test.sh; sync; ./scripts/test.sh
+RUN cp coverage.txt /coverage.txt
 
 FROM alpine:3.6
 LABEL maintainer="Jeff Wozniak <jeff.wozniak@logicmonitor.com>"
@@ -49,7 +49,7 @@ WORKDIR /app
 COPY --from=api /go/src/github.com/logicmonitor/k8s-chart-manager-controller/api/* /tmp/
 COPY --from=codegen /go/src/github.com/logicmonitor/k8s-chart-manager-controller/pkg/apis/v1alpha1/zz_generated.deepcopy.go /tmp/
 COPY --from=build /chart-manager-controller /bin
-# COPY --from=test /coverage.txt /coverage.txt
+COPY --from=test /coverage.txt /coverage.txt
 
 ENTRYPOINT ["chart-manager-controller"]
 CMD ["manage"]
