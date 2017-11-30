@@ -33,6 +33,8 @@ ARG VERSION
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o /chart-manager-controller -ldflags "-X \"github.com/logicmonitor/k8s-chart-manager-controller/pkg/constants.Version=${VERSION}\""
 
 FROM golang:1.9 as test
+ARG CI
+ENV CI=$CI
 WORKDIR $GOPATH/src/github.com/logicmonitor/k8s-chart-manager-controller
 RUN go get -u github.com/alecthomas/gometalinter
 RUN gometalinter --install
