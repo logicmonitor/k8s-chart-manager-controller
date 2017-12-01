@@ -483,7 +483,7 @@
 
 [[projects]]
   name = "k8s.io/helm"
-  packages = ["pkg/chartutil","pkg/downloader","pkg/getter","pkg/helm","pkg/helm/environment","pkg/helm/helmpath","pkg/helm/portforwarder","pkg/ignore","pkg/kube","pkg/plugin","pkg/proto/hapi/chart","pkg/proto/hapi/release","pkg/proto/hapi/services","pkg/proto/hapi/version","pkg/provenance","pkg/repo","pkg/resolver","pkg/tlsutil","pkg/urlutil","pkg/version"]
+  packages = ["pkg/chartutil","pkg/downloader","pkg/getter","pkg/helm","pkg/helm/environment","pkg/helm/helmpath","pkg/helm/portforwarder","pkg/ignore","pkg/kube","pkg/plugin","pkg/proto/hapi/chart","pkg/proto/hapi/release","pkg/proto/hapi/services","pkg/proto/hapi/version","pkg/provenance","pkg/repo","pkg/resolver","pkg/strvals","pkg/tlsutil","pkg/urlutil","pkg/version"]
   revision = "8478fb4fc723885b155c924d1c8c410b7a9444e6"
   version = "v2.7.2"
 
@@ -520,6 +520,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ffe38aeca744aec53fd9d8f7617f5a9b1e2fbd3b805dd5cbca26eb1342edbb3d"
+  inputs-digest = "3f5ea5cc36b5193703f31518c8ed691f5b59bb0d49e7b34e2aa5e805ab901ac5"
   solver-name = "gps-cdcl"
   solver-version = 1
