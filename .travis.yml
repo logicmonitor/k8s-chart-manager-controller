@@ -25,7 +25,7 @@ install:
   - sudo apt-get -y install docker-ce
 
 script:
-  - travis_wait make
+  - make
 #
 # after_success:
 #   - docker run --volume=$(pwd):/out --entrypoint=cp logicmonitor/argus:latest /coverage.txt /out
