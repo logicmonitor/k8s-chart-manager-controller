@@ -53,6 +53,9 @@ var manageCmd = &cobra.Command{
 		defer cancelFunc()
 		go chartmgrcontroller.Run(ctx) // nolint: errcheck
 
+    // Health check.
+		http.HandleFunc("/healthz", healthz.HandleFunc)
+		log.Fatal(http.ListenAndServe(":8080", nil))
 	},
 }
 
