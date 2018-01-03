@@ -142,7 +142,7 @@ func (c *Client) waitForCRD(crdName string) error {
 }
 
 func (c *Client) updateCustomResourceDefinition(crdName string) (*apiextensionsv1beta1.CustomResourceDefinition, error) {
-	log.Warnf("CRD already %s exists. Attempting to update.", crdName)
+	log.Warnf("CRD %s already exists. Attempting to update.", crdName)
 	crd, err := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crdName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
