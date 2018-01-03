@@ -53,11 +53,6 @@ var manageCmd = &cobra.Command{
 		defer cancelFunc()
 		go chartmgrcontroller.Run(ctx) // nolint: errcheck
 
-		// Start the gRPC server.
-		srv := server.New()
-		go srv.Run()
-
-		select {}
 	},
 }
 
