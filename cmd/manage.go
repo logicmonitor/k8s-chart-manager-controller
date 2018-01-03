@@ -16,10 +16,11 @@ package cmd
 
 import (
 	"context"
+  "net/http"
 
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/config"
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/controller"
-	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/server"
+  "github.com/logicmonitor/k8s-chart-manager-controller/pkg/healthz"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
