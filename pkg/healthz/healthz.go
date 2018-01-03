@@ -9,7 +9,7 @@ import (
 // HandleFunc is an http handler function to expose health metrics.
 func HandleFunc(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte("ok"))
+	_, err := w.Write("ok")
 	if err != nil {
 		log.Errorf("Failed to write healthz: %v", err)
 	}
