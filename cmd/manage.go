@@ -16,11 +16,11 @@ package cmd
 
 import (
 	"context"
-  "net/http"
+	"net/http"
 
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/config"
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/controller"
-  "github.com/logicmonitor/k8s-chart-manager-controller/pkg/healthz"
+	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/healthz"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -54,7 +54,7 @@ var manageCmd = &cobra.Command{
 		defer cancelFunc()
 		go chartmgrcontroller.Run(ctx) // nolint: errcheck
 
-    // Health check.
+		// Health check.
 		http.HandleFunc("/healthz", healthz.HandleFunc)
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	},
