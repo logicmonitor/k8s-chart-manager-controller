@@ -7,6 +7,8 @@ spec:
     name: argus
     repository:
       url: ttps://logicmonitor.github.com/k8s-helm-charts
+  release:
+    name: TEST@#$_.
   values:
     - name: collectorVersion
   options:
