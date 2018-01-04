@@ -8,7 +8,7 @@ import (
 type Config struct {
 	TillerHost        string
 	TillerNamespace   string `default:"kube-system"`
-	ReleaseTimeoutMin int64  `default:"5"`
+	ReleaseTimeoutSec int64  `default:"300"`
 	DebugMode         bool   `envconfig:"DEBUG"`
 }
 

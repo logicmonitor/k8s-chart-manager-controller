@@ -267,7 +267,7 @@ func installRelease(chartmgr *crv1alpha1.ChartManager,
 
 	ops := []helm.InstallOption{
 		helm.InstallReuseName(true),
-		helm.InstallTimeout(chartmgrconfig.ReleaseTimeoutMin),
+		helm.InstallTimeout(chartmgrconfig.ReleaseTimeoutSec),
 		helm.InstallWait(true),
 		helm.ReleaseName(rlsName),
 		helm.ValueOverrides(vals),
@@ -300,7 +300,7 @@ func updateRelease(chartmgr *crv1alpha1.ChartManager,
 
 	ops := []helm.UpdateOption{
 		helm.UpdateValueOverrides(vals),
-		helm.UpgradeTimeout(chartmgrconfig.ReleaseTimeoutMin),
+		helm.UpgradeTimeout(chartmgrconfig.ReleaseTimeoutSec),
 		helm.UpgradeWait(true),
 	}
 
@@ -322,7 +322,7 @@ func deleteRelease(chartmgrconfig *config.Config, rlsName string, helmClient *he
 
 	delOps := []helm.DeleteOption{
 		helm.DeletePurge(true),
-		helm.DeleteTimeout(chartmgrconfig.ReleaseTimeoutMin),
+		helm.DeleteTimeout(chartmgrconfig.ReleaseTimeoutSec),
 	}
 
 	rsp, err := helmClient.DeleteRelease(rlsName, delOps...)

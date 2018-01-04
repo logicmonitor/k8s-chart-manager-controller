@@ -54,7 +54,7 @@ Use "k8s-chart-manager-controller [command] --help" for more information about a
 |-------------------|--------|----------|:--------------:|---------------------------------------------------------------------|
 | TillerHost        | string | no       | [local tunnel] | Hostname and port of the Tiller server.                             |
 | TillerNamespace   | string | no       | kube-system    | Namespace where Tiller is running.                                  |
-| ReleaseTimeoutMin | int    | no       | 5              | Time in minutes to wait for a Helm release to be marked successful. |
+| ReleaseTimeoutSec | int    | no       | 600            | Time in seconds to wait for a Helm release to be marked successful. |
 | DebugMode         | bool   | no       | false          | Enable debug logging.                                               |
 
 ## Chart Manager Custom Object Fields
