@@ -71,7 +71,7 @@ func DeleteChartMgr(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Co
 func removeMismatchedReleases(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client) error {
 	// if something has previously gone wrong and there is no release associated
 	// with the chartmgr, exit immediately.
-	if chartmgr.Status.ReleaseName != "" {
+	if chartmgr.Status.ReleaseName == "" {
 		return nil
 	}
 
