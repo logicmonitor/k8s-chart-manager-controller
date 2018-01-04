@@ -46,7 +46,6 @@ func CreateOrUpdateChartMgr(
 	// if there's already a release for this chartmgr, do an upgrade.
 	log.Infof("Release %s found. Updating.", rlsName)
 	return updateRelease(chartmgr, chartmgrconfig, helmClient, rlsName, chart)
-
 }
 
 // DeleteChartMgr deletes a Chart Manager
@@ -70,6 +69,12 @@ func DeleteChartMgr(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Co
 }
 
 func removeMismatchedReleases(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client) error {
+	// if something has previously gone wrong and there is no release associated
+	// with the chartmgr, exit immediately.
+	if chartmgr.Status.ReleaseName != "" {
+		return nil
+	}
+
 	// check the condition wherein the calculated release name doesn't match
 	// what the chartmgr thinks the name should be. this is bad.
 	// we should attempt to delete the release currently associated
