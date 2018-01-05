@@ -9,6 +9,8 @@ spec:
     repository:
       name: lm1234
       url: https://logicmonitor.github.com/k8s-helm-charts
+  release:
+    name: this-release-name-123
   values:
     - name: global.accessID
       value: test

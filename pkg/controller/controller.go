@@ -107,13 +107,9 @@ func (c *Controller) manage(ctx context.Context) error {
 func (c *Controller) addFunc(obj interface{}) {
 	chartmgr := obj.(*crv1alpha1.ChartManager)
 	rls, err := CreateOrUpdateChartMgr(chartmgr, c.Config, c.HelmClient, c.HelmSettings)
-	rlsName := ""
 	if err != nil {
 		log.Errorf("Failed to create Chart Manager: %v", err)
-		if rls != nil {
-			rlsName = rls.Name
-		}
-		_, updterr := c.updateChartMgrStatus(chartmgr, crv1alpha1.ChartMgrStateFailed, rlsName, err.Error())
+		_, updterr := c.updateChartMgrStatus(chartmgr, crv1alpha1.ChartMgrStateFailed, err.Error())
 		if updterr != nil {
 			log.Warnf("Failed to update Chart Manager: %v", updterr)
 			log.Errorf("Failed to create Chart Manager: %v", err)
@@ -122,29 +118,30 @@ func (c *Controller) addFunc(obj interface{}) {
 	}
 
 	status := getReleaseStatusName(rls)
-	_, err = c.updateChartMgrStatus(chartmgr, status, rls.Name, string(status))
+	_, err = c.updateChartMgrStatus(chartmgr, status, string(status))
 	if err != nil {
 		log.Errorf("Failed to update Chart Manager status: %v", err)
 		return
 	}
 
-	if err = waitForReleaseToDeploy(rls); err != nil {
-		_, _ = c.updateChartMgrStatus(chartmgr, status, rls.Name, err.Error())
+	err = waitForReleaseToDeploy(rls)
+	if err != nil {
+		_, _ = c.updateChartMgrStatus(chartmgr, status, err.Error())
 		log.Errorf("Failed to verify that release %v deployed: %v", rls.Name, err)
 		return
 	}
 
-	log.Infof("Chart Manager %q has deployed release %q version %q",
-		chartmgr.Name, chartmgr.Spec.Chart.Version, rls.Name)
+	log.Infof("Chart Manager %s has deployed release %s version %s",
+		chartmgr.Name, parseVersion(chartmgr), rls.Name)
 
 	status = getReleaseStatusName(rls)
-	chartmgrCopy, err := c.updateChartMgrStatus(chartmgr, status, rls.Name, string(status))
+	chartmgrCopy, err := c.updateChartMgrStatus(chartmgr, status, string(status))
 	if err != nil {
 		log.Errorf("Failed to update Chart Manager status: %v", err)
 		return
 	}
 
-	log.Infof("Chart Manager %q status is %q", chartmgrCopy.Name, chartmgrCopy.Status.State)
+	log.Infof("Chart Manager %s status is %s", chartmgrCopy.Name, chartmgrCopy.Status.State)
 	log.Infof("Created Chart Manager: %s", chartmgrCopy.Name)
 }
 
@@ -175,9 +172,10 @@ func (c *Controller) deleteFunc(obj interface{}) {
 func (c *Controller) updateChartMgrStatus(
 	chartmgr *crv1alpha1.ChartManager,
 	status crv1alpha1.ChartMgrState,
-	rlsName string,
 	message string) (*crv1alpha1.ChartManager, error) {
 	chartmgrCopy := chartmgr.DeepCopy()
+
+	rlsName := getReleaseName(chartmgr)
 
 	log.Debugf("Updating Chart Manager status: state=%s release=%s", status, rlsName)
 	chartmgrCopy.Status = crv1alpha1.ChartMgrStatus{
@@ -201,9 +199,20 @@ func (c *Controller) updateChartMgrStatus(
 }
 
 func getReleaseStatusName(rls *rspb.Release) crv1alpha1.ChartMgrState {
+	if rls == nil {
+		return crv1alpha1.ChartMgrStateUnknown
+	}
+	return releaseStatusCodeToName(rls.Info.Status.Code)
+}
+
+func getReleaseStatusCode(rls *rspb.Release) rspb.Status_Code {
+	return rls.Info.Status.Code
+}
+
+func releaseStatusCodeToName(code rspb.Status_Code) crv1alpha1.ChartMgrState {
 	// map the release status to our chartmgr status
 	// https://github.com/kubernetes/helm/blob/8fc88ab62612f6ca81a3c1187f3a545da4ed6935/_proto/hapi/release/status.proto
-	switch int32(rls.Info.Status.Code) {
+	switch int32(code) {
 	case 1:
 		// Status_DEPLOYED indicates that the release has been pushed to Kubernetes.
 		return crv1alpha1.ChartMgrStateDeployed
@@ -232,10 +241,6 @@ func getReleaseStatusName(rls *rspb.Release) crv1alpha1.ChartMgrState {
 		// Status_UNKNOWN indicates that a release is in an uncertain state.
 		return crv1alpha1.ChartMgrStateUnknown
 	}
-}
-
-func getReleaseStatusCode(rls *rspb.Release) rspb.Status_Code {
-	return rls.Info.Status.Code
 }
 
 func releaseDeployed(rls *rspb.Release) bool {

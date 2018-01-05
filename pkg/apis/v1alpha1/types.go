@@ -48,12 +48,18 @@ type ChartManager struct {
 type ChartMgrSpec struct {
 	Chart   *ChartMgrChart       `json:"chart,omitempty"`
 	Options *ChartMgrOptions     `json:"options,omitempty"`
+	Release *ChartMgrRelease     `json:"release,omitempty"`
 	Values  []*ChartMgrValuePair `json:"values,omitempty"`
 }
 
 // ChartMgrOptions represents the chartmgr configuration options
 type ChartMgrOptions struct {
 	CreateOnly bool `json:"createOnly,omitempty"`
+}
+
+// ChartMgrRelease represents the chartmgr controller's helm release definition
+type ChartMgrRelease struct {
+	Name string `json:"name,omitempty"`
 }
 
 // ChartMgrChart represents the chartmgr controller's chart definition

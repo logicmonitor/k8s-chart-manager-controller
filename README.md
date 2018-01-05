@@ -63,6 +63,7 @@ Use "k8s-chart-manager-controller [command] --help" for more information about a
 | Field   | Type                     | Required | Description  |
 |---------|--------------------------|----------|--------------|
 | chart   | ChartManagerChart        | yes      | Helm chart configuration options. Provides information about the Helm chart to be used for creating a release. |
+| release | ChartManagerRelease      | no       | Helm release configuration options. Provides information about the Helm release to be created. |
 | values  | ChartManagerValue array  | no       | List of values to override in the chart. Each name/value pair is the equivalent of using the Helm CLI '--set' flag. |
 | options | ChartManagerOptions      | no       | Custom object configuration options. |
 
@@ -73,6 +74,13 @@ Use "k8s-chart-manager-controller [command] --help" for more information about a
 | name       | string                | yes      | Name of the chart to install. |
 | version    | string                | no       | Version of the chart to install. Defaults to the latest version. |
 | repository | ChartManagerChartRepo | no       | Helm chart repository configuration options. Provides the ability to install charts from a private or third-party chart repo. Defaults to stable. |
+
+### ChartManagerRelease
+
+| Field      | Type                  | Required | Description |
+|------------|-----------------------|----------|-------------|
+| name       | string                | yes      | Name of the release to create. |
+
 
 ### ChartManagerChartRepo
 | Field     | Type   | Required | Description                       |

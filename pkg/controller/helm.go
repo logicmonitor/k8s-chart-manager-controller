@@ -253,11 +253,7 @@ func loadChart(filename string) (*chart.Chart, error) {
 	return chartRequested, nil
 }
 
-func installRelease(chartmgr *crv1alpha1.ChartManager,
-	chartmgrconfig *config.Config,
-	helmClient *helm.Client,
-	rlsName string,
-	chart *chart.Chart,
+func installRelease(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client, chart *chart.Chart,
 ) (*rspb.Release, error) {
 
 	vals, err := parseValues(chartmgr)
@@ -265,6 +261,7 @@ func installRelease(chartmgr *crv1alpha1.ChartManager,
 		return nil, err
 	}
 
+	rlsName := getReleaseName(chartmgr)
 	ops := []helm.InstallOption{
 		helm.InstallReuseName(true),
 		helm.InstallTimeout(chartmgrconfig.ReleaseTimeoutSec),
@@ -286,16 +283,15 @@ func installRelease(chartmgr *crv1alpha1.ChartManager,
 	return rsp.Release, nil
 }
 
-func updateRelease(chartmgr *crv1alpha1.ChartManager,
-	chartmgrconfig *config.Config,
-	helmClient *helm.Client,
-	rlsName string,
-	chart *chart.Chart,
+func updateRelease(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client, chart *chart.Chart,
 ) (*rspb.Release, error) {
+
+	rlsName := getReleaseName(chartmgr)
+	rls, _ := getHelmRelease(helmClient, rlsName)
 
 	vals, err := parseValues(chartmgr)
 	if err != nil {
-		return nil, err
+		return rls, err
 	}
 
 	ops := []helm.UpdateOption{
@@ -307,13 +303,14 @@ func updateRelease(chartmgr *crv1alpha1.ChartManager,
 	log.Infof("Updating release %s", rlsName)
 	rsp, err := helmClient.UpdateReleaseFromChart(rlsName, chart, ops...)
 	if err != nil {
-		return nil, err
+		return rls, err
 	}
 	log.Infof("Updated release %s", rsp.Release.Name)
 	return rsp.Release, nil
 }
 
-func deleteRelease(chartmgrconfig *config.Config, rlsName string, helmClient *helm.Client) error {
+func deleteRelease(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client) error {
+	rlsName := getReleaseName(chartmgr)
 	if rlsName == "" {
 		return nil
 	}
@@ -333,7 +330,19 @@ func deleteRelease(chartmgrconfig *config.Config, rlsName string, helmClient *he
 	return nil
 }
 
-func getSingleReleaseName(helmClient *helm.Client, rlsFilter string) (string, error) {
+func getHelmReleaseName(helmClient *helm.Client, rlsFilter string) (string, error) {
+	rls, err := getHelmRelease(helmClient, rlsFilter)
+	if err != nil {
+		log.Warnf("%s", err)
+		return "", nil
+	}
+	if rls == nil {
+		return "", nil
+	}
+	return rls.Name, nil
+}
+
+func getHelmRelease(helmClient *helm.Client, rlsFilter string) (*rspb.Release, error) {
 	// try to list the release and determine if it already exists
 	log.Debugf("Attempting to locate helm release with filter %s", rlsFilter)
 
@@ -352,17 +361,16 @@ func getSingleReleaseName(helmClient *helm.Client, rlsFilter string) (string, er
 
 	listRsp, err := helmClient.ListReleases(listOps...)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if listRsp.Count < 1 {
-		return "", nil
+		return nil, nil
 	} else if listRsp.Count > 1 {
-		log.Warnf("Found multiple helm releases matching filter %s", rlsFilter)
-		return "", fmt.Errorf("multiple releases found for this Chart Manager")
+		return nil, fmt.Errorf("multiple releases found for this Chart Manager")
 	}
 	log.Debugf("Found helm release matching filter %s", rlsFilter)
-	return listRsp.Releases[0].Name, nil
+	return listRsp.Releases[0], nil
 }
 
 func parseVersion(chartmgr *crv1alpha1.ChartManager) string {
@@ -387,17 +395,6 @@ func parseRepoName(chartmgr *crv1alpha1.ChartManager) string {
 		repoName = chartmgr.Spec.Chart.Repository.Name
 	}
 	return repoName
-}
-
-func getReleaseName(chartmgr *crv1alpha1.ChartManager) string {
-	// releases created by the controller are formatted:
-	// chartmgr-rls-[chartmgr uid]
-	uid := chartmgr.ObjectMeta.UID
-
-	rlsName := fmt.Sprintf("%s-%s", constants.ReleaseNamePrefix, uid)
-	log.Debugf("Generated release name %s", rlsName)
-
-	return rlsName
 }
 
 func parseValues(chartmgr *crv1alpha1.ChartManager) ([]byte, error) {
