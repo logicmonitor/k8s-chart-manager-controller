@@ -107,13 +107,10 @@ func (c *Controller) manage(ctx context.Context) error {
 func (c *Controller) addFunc(obj interface{}) {
 	chartmgr := obj.(*crv1alpha1.ChartManager)
 	rls, err := CreateOrUpdateChartMgr(chartmgr, c.Config, c.HelmClient, c.HelmSettings)
-	rlsName := ""
+
 	if err != nil {
 		log.Errorf("Failed to create Chart Manager: %v", err)
-		if rls != nil {
-			rlsName = rls.Name
-		}
-		_, updterr := c.updateChartMgrStatus(chartmgr, crv1alpha1.ChartMgrStateFailed, rlsName, err.Error())
+		_, updterr := c.updateChartMgrStatus(chartmgr, crv1alpha1.ChartMgrStateFailed, err.Error())
 		if updterr != nil {
 			log.Warnf("Failed to update Chart Manager: %v", updterr)
 			log.Errorf("Failed to create Chart Manager: %v", err)
@@ -122,14 +119,14 @@ func (c *Controller) addFunc(obj interface{}) {
 	}
 
 	status := getReleaseStatusName(rls)
-	_, err = c.updateChartMgrStatus(chartmgr, status, rls.Name, string(status))
+	_, err = c.updateChartMgrStatus(chartmgr, status, string(status))
 	if err != nil {
 		log.Errorf("Failed to update Chart Manager status: %v", err)
 		return
 	}
 
 	if err = waitForReleaseToDeploy(rls); err != nil {
-		_, _ = c.updateChartMgrStatus(chartmgr, status, rls.Name, err.Error())
+		_, _ = c.updateChartMgrStatus(chartmgr, status, err.Error())
 		log.Errorf("Failed to verify that release %v deployed: %v", rls.Name, err)
 		return
 	}
@@ -138,7 +135,7 @@ func (c *Controller) addFunc(obj interface{}) {
 		chartmgr.Name, parseVersion(chartmgr), rls.Name)
 
 	status = getReleaseStatusName(rls)
-	chartmgrCopy, err := c.updateChartMgrStatus(chartmgr, status, rls.Name, string(status))
+	chartmgrCopy, err := c.updateChartMgrStatus(chartmgr, status, string(status))
 	if err != nil {
 		log.Errorf("Failed to update Chart Manager status: %v", err)
 		return
@@ -175,9 +172,10 @@ func (c *Controller) deleteFunc(obj interface{}) {
 func (c *Controller) updateChartMgrStatus(
 	chartmgr *crv1alpha1.ChartManager,
 	status crv1alpha1.ChartMgrState,
-	rlsName string,
 	message string) (*crv1alpha1.ChartManager, error) {
 	chartmgrCopy := chartmgr.DeepCopy()
+
+	rlsName := getReleaseName(chartmgr)
 
 	log.Debugf("Updating Chart Manager status: state=%s release=%s", status, rlsName)
 	chartmgrCopy.Status = crv1alpha1.ChartMgrStatus{
