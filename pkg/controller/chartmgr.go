@@ -48,12 +48,13 @@ func CreateOrUpdateChartMgr(
 
 	// if there's already a release for this chartmgr, do an upgrade.
 	log.Infof("Release %s found. Updating.", rlsName)
-	return updateRelease(chartmgr, chartmgrconfig, helmClient, hart)
+	return updateRelease(chartmgr, chartmgrconfig, helmClient, chart)
 }
 
 // DeleteChartMgr deletes a Chart Manager
 func DeleteChartMgr(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client) error {
 
+	rlsName := getReleaseName(chartmgr)
 	rls, err := getHelmRelease(helmClient, string(chartmgr.ObjectMeta.UID))
 	if err != nil {
 		return err

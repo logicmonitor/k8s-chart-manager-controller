@@ -310,6 +310,7 @@ func updateRelease(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Con
 }
 
 func deleteRelease(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client) error {
+	rlsName := getReleaseName(chartmgr)
 	if rlsName == "" {
 		return nil
 	}
