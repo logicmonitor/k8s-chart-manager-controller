@@ -107,7 +107,6 @@ func (c *Controller) manage(ctx context.Context) error {
 func (c *Controller) addFunc(obj interface{}) {
 	chartmgr := obj.(*crv1alpha1.ChartManager)
 	rls, err := CreateOrUpdateChartMgr(chartmgr, c.Config, c.HelmClient, c.HelmSettings)
-
 	if err != nil {
 		log.Errorf("Failed to create Chart Manager: %v", err)
 		_, updterr := c.updateChartMgrStatus(chartmgr, crv1alpha1.ChartMgrStateFailed, err.Error())
@@ -125,7 +124,8 @@ func (c *Controller) addFunc(obj interface{}) {
 		return
 	}
 
-	if err = waitForReleaseToDeploy(rls); err != nil {
+	err = waitForReleaseToDeploy(rls)
+	if err != nil {
 		_, _ = c.updateChartMgrStatus(chartmgr, status, err.Error())
 		log.Errorf("Failed to verify that release %v deployed: %v", rls.Name, err)
 		return
