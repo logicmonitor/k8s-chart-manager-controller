@@ -286,10 +286,11 @@ func installRelease(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Co
 func updateRelease(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client, chart *chart.Chart,
 ) (*rspb.Release, error) {
 
-	rlsName := getReleaseName((chartmgr))
+	rlsName := getReleaseName(chartmgr)
+	rls, _ := getHelmRelease(helmClient, rlsName)
+
 	vals, err := parseValues(chartmgr)
 	if err != nil {
-		rls, _ := getHelmRelease(helmClient, rlsName)
 		return rls, err
 	}
 
@@ -302,7 +303,6 @@ func updateRelease(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Con
 	log.Infof("Updating release %s", rlsName)
 	rsp, err := helmClient.UpdateReleaseFromChart(rlsName, chart, ops...)
 	if err != nil {
-		rls, _ := getHelmRelease(helmClient, rlsName)
 		return rls, err
 	}
 	log.Infof("Updated release %s", rsp.Release.Name)
