@@ -202,10 +202,17 @@ func getReleaseStatusName(rls *rspb.Release) crv1alpha1.ChartMgrState {
 	if rls == nil {
 		return crv1alpha1.ChartMgrStateUnknown
 	}
+	return releaseStatusCodeToName(rls.Info.Status.Code)
+}
 
+func getReleaseStatusCode(rls *rspb.Release) rspb.Status_Code {
+	return rls.Info.Status.Code
+}
+
+func releaseStatusCodeToName(code rspb.Status_Code) crv1alpha1.ChartMgrState {
 	// map the release status to our chartmgr status
 	// https://github.com/kubernetes/helm/blob/8fc88ab62612f6ca81a3c1187f3a545da4ed6935/_proto/hapi/release/status.proto
-	switch int32(rls.Info.Status.Code) {
+	switch int32(code) {
 	case 1:
 		// Status_DEPLOYED indicates that the release has been pushed to Kubernetes.
 		return crv1alpha1.ChartMgrStateDeployed
@@ -234,10 +241,6 @@ func getReleaseStatusName(rls *rspb.Release) crv1alpha1.ChartMgrState {
 		// Status_UNKNOWN indicates that a release is in an uncertain state.
 		return crv1alpha1.ChartMgrStateUnknown
 	}
-}
-
-func getReleaseStatusCode(rls *rspb.Release) rspb.Status_Code {
-	return rls.Info.Status.Code
 }
 
 func releaseDeployed(rls *rspb.Release) bool {
