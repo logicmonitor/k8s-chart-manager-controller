@@ -333,7 +333,7 @@ func deleteRelease(chartmgrconfig *config.Config, rlsName string, helmClient *he
 	return nil
 }
 
-func getSingleReleaseName(helmClient *helm.Client, rlsFilter string) (string, error) {
+func getHelmReleaseName(helmClient *helm.Client, rlsFilter string) (string, error) {
 	// try to list the release and determine if it already exists
 	log.Debugf("Attempting to locate helm release with filter %s", rlsFilter)
 

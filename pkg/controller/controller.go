@@ -134,8 +134,8 @@ func (c *Controller) addFunc(obj interface{}) {
 		return
 	}
 
-	log.Infof("Chart Manager %q has deployed release %q version %q",
-		chartmgr.Name, chartmgr.Spec.Chart.Version, rls.Name)
+	log.Infof("Chart Manager %s has deployed release %s version %s",
+		chartmgr.Name, parseVersion(chartmgr), rls.Name)
 
 	status = getReleaseStatusName(rls)
 	chartmgrCopy, err := c.updateChartMgrStatus(chartmgr, status, rls.Name, string(status))
@@ -144,7 +144,7 @@ func (c *Controller) addFunc(obj interface{}) {
 		return
 	}
 
-	log.Infof("Chart Manager %q status is %q", chartmgrCopy.Name, chartmgrCopy.Status.State)
+	log.Infof("Chart Manager %s status is %s", chartmgrCopy.Name, chartmgrCopy.Status.State)
 	log.Infof("Created Chart Manager: %s", chartmgrCopy.Name)
 }
 

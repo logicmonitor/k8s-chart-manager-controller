@@ -51,7 +51,7 @@ func CreateOrUpdateChartMgr(
 // DeleteChartMgr deletes a Chart Manager
 func DeleteChartMgr(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client) error {
 
-	rlsName, err := getSingleReleaseName(helmClient, string(chartmgr.ObjectMeta.UID))
+	rlsName, err := getHelmReleaseName(helmClient, string(chartmgr.ObjectMeta.UID))
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func removeMismatchedReleases(chartmgr *crv1alpha1.ChartManager, chartmgrconfig 
 	rlsName := getReleaseName(chartmgr)
 	if releaseNamesMismatched(chartmgr, rlsName) {
 		log.Warnf("Calculated release name %s does not match stored release %s", rlsName, chartmgr.Status.ReleaseName)
-		n, _ := getSingleReleaseName(helmClient, chartmgr.Status.ReleaseName)
+		n, _ := getHelmReleaseName(helmClient, chartmgr.Status.ReleaseName)
 		err := deleteRelease(chartmgrconfig, n, helmClient)
 		if err != nil {
 			return err
@@ -104,7 +104,7 @@ func releaseNamesMismatched(chartmgr *crv1alpha1.ChartManager, rlsName string) b
 
 func rlsNameExists(helmClient *helm.Client, rlsName string) (bool, error) {
 	// do a lookup and see if there's already a release created for this chartmgr.
-	found, err := getSingleReleaseName(helmClient, rlsName)
+	found, err := getHelmReleaseName(helmClient, rlsName)
 	if err != nil {
 		return false, err
 	}
