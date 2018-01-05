@@ -78,7 +78,7 @@ func removeMismatchedReleases(chartmgr *crv1alpha1.ChartManager, chartmgrconfig 
 	// we should attempt to delete the release currently associated
 	// with the chartmgr.
 	if releaseNamesMismatched(chartmgr) {
-		log.Warnf("Calculated release name %s does not match stored release %s", rlsName, chartmgr.Status.ReleaseName)
+		log.Warnf("Calculated release name %s does not match stored release %s", getReleaseName(chartmgr), chartmgr.Status.ReleaseName)
 		err := deleteRelease(chartmgr, chartmgrconfig, helmClient)
 		if err != nil {
 			return err
