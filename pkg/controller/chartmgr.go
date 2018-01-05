@@ -121,3 +121,20 @@ func createOnly(chartmgr *crv1alpha1.ChartManager) bool {
 	}
 	return false
 }
+
+func getReleaseName(chartmgr *crv1alpha1.ChartManager) string {
+	// if the release name is explicitly set, return that
+	if chartmgr.Spec.Release != nil {
+		log.Debugf("Release name %s specified in resource definition", chartmgr.Spec.Release.Name)
+		return chartmgr.Spec.Release.Name
+	}
+
+	// releases created by the controller are formatted:
+	// chartmgr-rls-[chartmgr uid]
+	uid := chartmgr.ObjectMeta.UID
+
+	rlsName := fmt.Sprintf("%s-%s", constants.ReleaseNamePrefix, uid)
+	log.Debugf("Generated release name %s", rlsName)
+
+	return rlsName
+}

@@ -389,17 +389,6 @@ func parseRepoName(chartmgr *crv1alpha1.ChartManager) string {
 	return repoName
 }
 
-func getReleaseName(chartmgr *crv1alpha1.ChartManager) string {
-	// releases created by the controller are formatted:
-	// chartmgr-rls-[chartmgr uid]
-	uid := chartmgr.ObjectMeta.UID
-
-	rlsName := fmt.Sprintf("%s-%s", constants.ReleaseNamePrefix, uid)
-	log.Debugf("Generated release name %s", rlsName)
-
-	return rlsName
-}
-
 func parseValues(chartmgr *crv1alpha1.ChartManager) ([]byte, error) {
 	log.Debugf("Parsing values")
 	base := map[string]interface{}{}

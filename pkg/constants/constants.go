@@ -33,6 +33,11 @@ const (
 	ValidateChartRepoURLPattern = "^(http:\\/\\/www\\.|https:\\/\\/www\\.|http:\\/\\/|https:\\/\\/)?[a-z0-9]+([\\-\\.]{1}[a-z0-9]+)*\\.[a-z]{2,5}(:[0-9]{1,5})?(\\/.*)?"
 )
 
+const (
+	// ValidateReleaseNamePattern is the regex pattern used to validate helm release names
+	ValidateReleaseNamePattern = "^[a-z0-9\\-]+?"
+)
+
 // ChartMgrValidationRules returns the CRD validation
 func ChartMgrValidationRules() *apiextensionsv1beta1.CustomResourceValidation {
 	return &apiextensionsv1beta1.CustomResourceValidation{
@@ -91,6 +96,17 @@ func ChartMgrValidationRules() *apiextensionsv1beta1.CustomResourceValidation {
 											MinLength: func(i int64) *int64 { return &i }(1),
 										},
 									},
+								},
+							},
+						},
+						"release": {
+							Required: []string{
+								"name",
+							},
+							Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
+								"name": {
+									Type:    "string",
+									Pattern: ValidateReleaseNamePattern,
 								},
 							},
 						},
