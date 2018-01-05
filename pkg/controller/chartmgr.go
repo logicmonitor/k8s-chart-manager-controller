@@ -40,12 +40,12 @@ func CreateOrUpdateChartMgr(
 
 	if createOnly(chartmgr) {
 		log.Infof("CreateOnly mode. Ignoring update of chart %s.", rlsName)
-		return nil, nil
+		return getHelmRelease(helmClient, rlsName)
 	}
 
 	// if there's already a release for this chartmgr, do an upgrade.
 	log.Infof("Release %s found. Updating.", rlsName)
-	return updateRelease(chartmgr, chartmgrconfig, helmClient, rlsName, chart)
+  return updateRelease(chartmgr, chartmgrconfig, helmClient, rlsName, chart)
 }
 
 // DeleteChartMgr deletes a Chart Manager

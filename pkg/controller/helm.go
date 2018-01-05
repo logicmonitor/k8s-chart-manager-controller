@@ -295,7 +295,8 @@ func updateRelease(chartmgr *crv1alpha1.ChartManager,
 
 	vals, err := parseValues(chartmgr)
 	if err != nil {
-		return nil, err
+		rls, _ := getHelmRelease(helmClient, rlsName)
+		return rls, err
 	}
 
 	ops := []helm.UpdateOption{
@@ -307,7 +308,8 @@ func updateRelease(chartmgr *crv1alpha1.ChartManager,
 	log.Infof("Updating release %s", rlsName)
 	rsp, err := helmClient.UpdateReleaseFromChart(rlsName, chart, ops...)
 	if err != nil {
-		return nil, err
+		rls, _ := getHelmRelease(helmClient, rlsName)
+		return rls, err
 	}
 	log.Infof("Updated release %s", rsp.Release.Name)
 	return rsp.Release, nil
