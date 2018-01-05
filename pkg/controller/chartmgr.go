@@ -103,6 +103,10 @@ func releaseNamesMismatched(chartmgr *crv1alpha1.ChartManager, rlsName string) b
 }
 
 func rlsNameExists(helmClient *helm.Client, rlsName string) (bool, error) {
+	if rlsName == "" {
+		return false, nil
+	}
+
 	// do a lookup and see if there's already a release created for this chartmgr.
 	found, err := getHelmReleaseName(helmClient, rlsName)
 	if err != nil {

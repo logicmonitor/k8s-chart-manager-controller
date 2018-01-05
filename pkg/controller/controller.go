@@ -199,6 +199,10 @@ func (c *Controller) updateChartMgrStatus(
 }
 
 func getReleaseStatusName(rls *rspb.Release) crv1alpha1.ChartMgrState {
+	if rls == nil {
+		return crv1alpha1.ChartMgrStateUnknown
+	}
+
 	// map the release status to our chartmgr status
 	// https://github.com/kubernetes/helm/blob/8fc88ab62612f6ca81a3c1187f3a545da4ed6935/_proto/hapi/release/status.proto
 	switch int32(rls.Info.Status.Code) {
