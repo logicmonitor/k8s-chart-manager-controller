@@ -334,6 +334,15 @@ func deleteRelease(chartmgrconfig *config.Config, rlsName string, helmClient *he
 }
 
 func getHelmReleaseName(helmClient *helm.Client, rlsFilter string) (string, error) {
+	rls, err := getHelmRelease(helmClient, rlsFilter)
+	if err != nil {
+		log.Warnf("%s", err)
+		return "", nil
+	}
+	return rls.Name, nil
+}
+
+func getHelmRelease(helmClient *helm.Client, rlsFilter string) (*rspb.Release, error) {
 	// try to list the release and determine if it already exists
 	log.Debugf("Attempting to locate helm release with filter %s", rlsFilter)
 
@@ -352,17 +361,16 @@ func getHelmReleaseName(helmClient *helm.Client, rlsFilter string) (string, erro
 
 	listRsp, err := helmClient.ListReleases(listOps...)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if listRsp.Count < 1 {
-		return "", nil
+		return nil, fmt.Errorf("No helm release matching filter %s found", rlsFilter)
 	} else if listRsp.Count > 1 {
-		log.Warnf("Found multiple helm releases matching filter %s", rlsFilter)
-		return "", fmt.Errorf("multiple releases found for this Chart Manager")
+		return nil, fmt.Errorf("multiple releases found for this Chart Manager")
 	}
 	log.Debugf("Found helm release matching filter %s", rlsFilter)
-	return listRsp.Releases[0].Name, nil
+	return listRsp.Releases[0], nil
 }
 
 func parseVersion(chartmgr *crv1alpha1.ChartManager) string {
