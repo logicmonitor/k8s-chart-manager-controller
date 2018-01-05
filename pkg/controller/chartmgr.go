@@ -38,7 +38,7 @@ func CreateOrUpdateChartMgr(
 
 	if !rlsExists {
 		log.Infof("Release %s not found. Installing.", rlsName)
-		return installRelease(chartmgr, chartmgrconfig, helmClient, rlsName, chart)
+		return installRelease(chartmgr, chartmgrconfig, helmClient, chart)
 	}
 
 	if createOnly(chartmgr) {
@@ -48,13 +48,13 @@ func CreateOrUpdateChartMgr(
 
 	// if there's already a release for this chartmgr, do an upgrade.
 	log.Infof("Release %s found. Updating.", rlsName)
-	return updateRelease(chartmgr, chartmgrconfig, helmClient, rlsName, chart)
+	return updateRelease(chartmgr, chartmgrconfig, helmClient, hart)
 }
 
 // DeleteChartMgr deletes a Chart Manager
 func DeleteChartMgr(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client) error {
 
-	rlsName, err := getHelmReleaseName(helmClient, string(chartmgr.ObjectMeta.UID))
+	rls, err := getHelmRelease(helmClient, string(chartmgr.ObjectMeta.UID))
 	if err != nil {
 		return err
 	}
@@ -64,29 +64,21 @@ func DeleteChartMgr(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Co
 		return nil
 	}
 
-	if rlsName != "" {
-		return deleteRelease(chartmgrconfig, rlsName, helmClient)
+	if rls == nil {
+		log.Warnf("No release found for Chart Manager %s", chartmgr.ObjectMeta.UID)
+		return nil
 	}
-	log.Warnf("No release found for Chart Manager %s", chartmgr.ObjectMeta.UID)
-	return nil
+	return deleteRelease(chartmgr, chartmgrconfig, helmClient)
 }
 
 func removeMismatchedReleases(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client) error {
-	// if something has previously gone wrong and there is no release associated
-	// with the chartmgr, exit immediately.
-	if chartmgr.Status.ReleaseName == "" {
-		return nil
-	}
-
 	// check the condition wherein the calculated release name doesn't match
 	// what the chartmgr thinks the name should be. this is bad.
 	// we should attempt to delete the release currently associated
 	// with the chartmgr.
-	rlsName := getReleaseName(chartmgr)
-	if releaseNamesMismatched(chartmgr, rlsName) {
+	if releaseNamesMismatched(chartmgr) {
 		log.Warnf("Calculated release name %s does not match stored release %s", rlsName, chartmgr.Status.ReleaseName)
-		n, _ := getHelmReleaseName(helmClient, chartmgr.Status.ReleaseName)
-		err := deleteRelease(chartmgrconfig, n, helmClient)
+		err := deleteRelease(chartmgr, chartmgrconfig, helmClient)
 		if err != nil {
 			return err
 		}
@@ -94,12 +86,18 @@ func removeMismatchedReleases(chartmgr *crv1alpha1.ChartManager, chartmgrconfig 
 	return nil
 }
 
-func releaseNamesMismatched(chartmgr *crv1alpha1.ChartManager, rlsName string) bool {
+func releaseNamesMismatched(chartmgr *crv1alpha1.ChartManager) bool {
 	if &chartmgr.Status == nil {
 		return false
 	}
 
-	if chartmgr.Status.ReleaseName != rlsName {
+	// if something has previously gone wrong and there is no release associated
+	// with the chartmgr, exit immediately.
+	if chartmgr.Status.ReleaseName == "" {
+		return false
+	}
+
+	if chartmgr.Status.ReleaseName != getReleaseName(chartmgr) {
 		return true
 	}
 	return false
@@ -132,7 +130,7 @@ func createOnly(chartmgr *crv1alpha1.ChartManager) bool {
 func getReleaseName(chartmgr *crv1alpha1.ChartManager) string {
 	// if the release name is explicitly set, return that
 	if chartmgr.Spec.Release != nil {
-		log.Debugf("Release name %s specified in resource definition", chartmgr.Spec.Release.Name)
+		// log.Debugf("Release name %s specified in resource definition", chartmgr.Spec.Release.Name)
 		return chartmgr.Spec.Release.Name
 	}
 
@@ -141,7 +139,7 @@ func getReleaseName(chartmgr *crv1alpha1.ChartManager) string {
 	uid := chartmgr.ObjectMeta.UID
 
 	rlsName := fmt.Sprintf("%s-%s", constants.ReleaseNamePrefix, uid)
-	log.Debugf("Generated release name %s", rlsName)
+	// log.Debugf("Generated release name %s", rlsName)
 
 	return rlsName
 }

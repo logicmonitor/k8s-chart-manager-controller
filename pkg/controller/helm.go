@@ -253,11 +253,7 @@ func loadChart(filename string) (*chart.Chart, error) {
 	return chartRequested, nil
 }
 
-func installRelease(chartmgr *crv1alpha1.ChartManager,
-	chartmgrconfig *config.Config,
-	helmClient *helm.Client,
-	rlsName string,
-	chart *chart.Chart,
+func installRelease(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client, chart *chart.Chart,
 ) (*rspb.Release, error) {
 
 	vals, err := parseValues(chartmgr)
@@ -265,6 +261,7 @@ func installRelease(chartmgr *crv1alpha1.ChartManager,
 		return nil, err
 	}
 
+	rlsName := getReleaseName(chartmgr)
 	ops := []helm.InstallOption{
 		helm.InstallReuseName(true),
 		helm.InstallTimeout(chartmgrconfig.ReleaseTimeoutSec),
@@ -286,13 +283,10 @@ func installRelease(chartmgr *crv1alpha1.ChartManager,
 	return rsp.Release, nil
 }
 
-func updateRelease(chartmgr *crv1alpha1.ChartManager,
-	chartmgrconfig *config.Config,
-	helmClient *helm.Client,
-	rlsName string,
-	chart *chart.Chart,
+func updateRelease(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client, chart *chart.Chart,
 ) (*rspb.Release, error) {
 
+	rlsName := getReleaseName((chartmgr))
 	vals, err := parseValues(chartmgr)
 	if err != nil {
 		rls, _ := getHelmRelease(helmClient, rlsName)
@@ -315,7 +309,7 @@ func updateRelease(chartmgr *crv1alpha1.ChartManager,
 	return rsp.Release, nil
 }
 
-func deleteRelease(chartmgrconfig *config.Config, rlsName string, helmClient *helm.Client) error {
+func deleteRelease(chartmgr *crv1alpha1.ChartManager, chartmgrconfig *config.Config, helmClient *helm.Client) error {
 	if rlsName == "" {
 		return nil
 	}
@@ -339,6 +333,9 @@ func getHelmReleaseName(helmClient *helm.Client, rlsFilter string) (string, erro
 	rls, err := getHelmRelease(helmClient, rlsFilter)
 	if err != nil {
 		log.Warnf("%s", err)
+		return "", nil
+	}
+	if rls == nil {
 		return "", nil
 	}
 	return rls.Name, nil
@@ -367,7 +364,7 @@ func getHelmRelease(helmClient *helm.Client, rlsFilter string) (*rspb.Release, e
 	}
 
 	if listRsp.Count < 1 {
-		return nil, fmt.Errorf("No helm release matching filter %s found", rlsFilter)
+		return nil, nil
 	} else if listRsp.Count > 1 {
 		return nil, fmt.Errorf("multiple releases found for this Chart Manager")
 	}
