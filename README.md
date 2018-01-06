@@ -39,6 +39,7 @@ Usage:
 
 
 Available Commands:
+  crd         Dump the custom resource definition to JSON or YAML
   help        Help about any command
   manage      Start the Chart Manager controller
 

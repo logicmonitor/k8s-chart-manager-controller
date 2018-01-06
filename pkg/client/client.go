@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	yaml "github.com/ghodss/yaml"
 	crv1alpha1 "github.com/logicmonitor/k8s-chart-manager-controller/pkg/apis/v1alpha1"
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/constants"
 	log "github.com/sirupsen/logrus"
@@ -69,34 +70,10 @@ func NewForConfig(cfg *rest.Config) (*Client, *runtime.Scheme, error) {
 
 // CreateCustomResourceDefinition creates the CRD for chartmgrs.
 func (c *Client) CreateCustomResourceDefinition() (*apiextensionsv1beta1.CustomResourceDefinition, error) {
-	crd := &apiextensionsv1beta1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: crdName,
-		},
-		Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
-			Group:   crv1alpha1.GroupName,
-			Version: crv1alpha1.SchemeGroupVersion.Version,
-			Scope:   apiextensionsv1beta1.NamespaceScoped,
-			Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
-				Plural: crv1alpha1.ChartMgrResourcePlural,
-				ShortNames: []string{
-					crv1alpha1.ChartMgrResourceShortNameSingular,
-					crv1alpha1.ChartMgrResourceShortNamePlural,
-				},
-				Kind: reflect.TypeOf(crv1alpha1.ChartManager{}).Name(),
-			},
-			Validation: constants.ChartMgrValidationRules(),
-		},
-	}
-
-	// let's take a look at the json we're sending
-	j, err := json.Marshal(crd)
-	if err == nil {
-		log.Debugf("CRD definition: %v", string(j))
-	}
+	crd := c.getCRD()
 
 	log.Infof("Creating CRD %s", crdName)
-	_, err = c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
+	_, err := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
 			return c.updateCustomResourceDefinition(crdName)
@@ -139,6 +116,50 @@ func (c *Client) waitForCRD(crdName string) error {
 		return false, err
 	})
 	return err
+}
+
+func (c *Client) getCRD() *apiextensionsv1beta1.CustomResourceDefinition {
+	return &apiextensionsv1beta1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: crdName,
+		},
+		Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
+			Group:   crv1alpha1.GroupName,
+			Version: crv1alpha1.SchemeGroupVersion.Version,
+			Scope:   apiextensionsv1beta1.NamespaceScoped,
+			Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
+				Plural: crv1alpha1.ChartMgrResourcePlural,
+				ShortNames: []string{
+					crv1alpha1.ChartMgrResourceShortNameSingular,
+					crv1alpha1.ChartMgrResourceShortNamePlural,
+				},
+				Kind: reflect.TypeOf(crv1alpha1.ChartManager{}).Name(),
+			},
+			Validation: constants.ChartMgrValidationRules(),
+		},
+	}
+}
+
+// GetCRDString returns the CRD as a YAML or JSON string
+func (c *Client) GetCRDString(format string) string {
+	crd := c.getCRD()
+
+	var s []byte
+	var err error
+
+	switch format {
+	case "yaml":
+		s, err = yaml.Marshal(crd)
+	case "json":
+		s, err = json.MarshalIndent(crd, "", "  ")
+	default:
+		s, err = yaml.Marshal(crd)
+	}
+	if err != nil {
+		log.Errorf("%v", err)
+		return ""
+	}
+	return string(s)
 }
 
 func (c *Client) updateCustomResourceDefinition(crdName string) (*apiextensionsv1beta1.CustomResourceDefinition, error) {
