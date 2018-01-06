@@ -50,8 +50,8 @@ func ChartMgrValidationRules() *apiextensionsv1beta1.CustomResourceValidation {
 	}
 }
 
-func specValidationRules() *apiextensionsv1beta1.JSONSchemaProps {
-	return &apiextensionsv1beta1.JSONSchemaProps{
+func specValidationRules() apiextensionsv1beta1.JSONSchemaProps {
+	return apiextensionsv1beta1.JSONSchemaProps{
 		Required: []string{
 			"chart",
 		},
@@ -64,8 +64,8 @@ func specValidationRules() *apiextensionsv1beta1.JSONSchemaProps {
 	}
 }
 
-func chartValidationRules() *apiextensionsv1beta1.JSONSchemaProps {
-	return &apiextensionsv1beta1.JSONSchemaProps{
+func chartValidationRules() apiextensionsv1beta1.JSONSchemaProps {
+	return apiextensionsv1beta1.JSONSchemaProps{
 		Required: []string{
 			"name",
 		},
@@ -79,8 +79,8 @@ func chartValidationRules() *apiextensionsv1beta1.JSONSchemaProps {
 	}
 }
 
-func valuesValidationRules() *apiextensionsv1beta1.JSONSchemaProps {
-	return &apiextensionsv1beta1.JSONSchemaProps{
+func valuesValidationRules() apiextensionsv1beta1.JSONSchemaProps {
+	return apiextensionsv1beta1.JSONSchemaProps{
 		Type: "array",
 		Items: &apiextensionsv1beta1.JSONSchemaPropsOrArray{
 			Schema: &apiextensionsv1beta1.JSONSchemaProps{
@@ -103,8 +103,8 @@ func valuesValidationRules() *apiextensionsv1beta1.JSONSchemaProps {
 	}
 }
 
-func releaseValidationRules() *apiextensionsv1beta1.JSONSchemaProps {
-	return &apiextensionsv1beta1.JSONSchemaProps{
+func releaseValidationRules() apiextensionsv1beta1.JSONSchemaProps {
+	return apiextensionsv1beta1.JSONSchemaProps{
 		Required: []string{
 			"name",
 		},
@@ -117,8 +117,8 @@ func releaseValidationRules() *apiextensionsv1beta1.JSONSchemaProps {
 	}
 }
 
-func optionsValidationRules() *apiextensionsv1beta1.JSONSchemaProps {
-	return &apiextensionsv1beta1.JSONSchemaProps{
+func optionsValidationRules() apiextensionsv1beta1.JSONSchemaProps {
+	return apiextensionsv1beta1.JSONSchemaProps{
 		Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
 			"createOnly": {
 				Type: "boolean",
@@ -127,8 +127,8 @@ func optionsValidationRules() *apiextensionsv1beta1.JSONSchemaProps {
 	}
 }
 
-func repositoryValidationRules() *apiextensionsv1beta1.JSONSchemaProps {
-	return &apiextensionsv1beta1.JSONSchemaProps{
+func repositoryValidationRules() apiextensionsv1beta1.JSONSchemaProps {
+	return apiextensionsv1beta1.JSONSchemaProps{
 		Required: []string{
 			"name",
 			"url",
