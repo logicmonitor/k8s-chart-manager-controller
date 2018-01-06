@@ -24,8 +24,6 @@ const (
 const (
 	// ChartMgrSecretName is the service account name with the proper RBAC policies to allow an chartmgr to wach the cluster.
 	ChartMgrSecretName = "chartmgr"
-	// HealthServerServiceName is the gRPC service name for the health checks.
-	HealthServerServiceName = "grpc.health.v1.Health"
 )
 
 const (
