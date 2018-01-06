@@ -184,7 +184,7 @@
 [[projects]]
   branch = "master"
   name = "github.com/golang/protobuf"
-  packages = ["proto","protoc-gen-go/descriptor","ptypes","ptypes/any","ptypes/duration","ptypes/timestamp"]
+  packages = ["proto","ptypes","ptypes/any","ptypes/duration","ptypes/timestamp"]
   revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
 
 [[projects]]
@@ -435,7 +435,7 @@
 
 [[projects]]
   name = "google.golang.org/grpc"
-  packages = [".","codes","credentials","grpclog","health","health/grpc_health_v1","internal","keepalive","metadata","naming","peer","reflection","reflection/grpc_reflection_v1alpha","stats","tap","transport"]
+  packages = [".","codes","credentials","grpclog","internal","keepalive","metadata","naming","peer","stats","tap","transport"]
   revision = "8050b9cbc271307e5a716a9d782803d09b0d6f2d"
   version = "v1.2.1"
 
@@ -520,6 +520,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3f5ea5cc36b5193703f31518c8ed691f5b59bb0d49e7b34e2aa5e805ab901ac5"
+  inputs-digest = "d63dc9b15e2fca829cc0c30f7ed40d715b274a9d4e032a5aeddee36b8a5d988a"
   solver-name = "gps-cdcl"
   solver-version = 1
