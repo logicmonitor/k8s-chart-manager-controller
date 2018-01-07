@@ -164,17 +164,21 @@ func (c *Controller) updateChartMgrStatus(chartmgr *crv1alpha1.ChartManager, rls
 		Message:     message,
 	}
 
-	err := c.RESTClient.Put().
+	err := c.put(chartmgr)
+
+	if err != nil {
+		log.Errorf("Failed to update status: %v", err)
+	}
+}
+
+func (c *Controller) put(chartmgr *crv1alpha1.ChartManager) error {
+	return c.RESTClient.Put().
 		Name(chartmgr.ObjectMeta.Name).
 		Namespace(chartmgr.ObjectMeta.Namespace).
 		Resource(crv1alpha1.ChartMgrResourcePlural).
 		Body(chartmgr).
 		Do().
 		Error()
-
-	if err != nil {
-		log.Errorf("Failed to update status: %v", err)
-	}
 }
 
 func (c *Controller) waitForReleaseToDeploy(rls *lmhelm.Release) error {
