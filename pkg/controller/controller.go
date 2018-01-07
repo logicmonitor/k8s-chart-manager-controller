@@ -138,7 +138,7 @@ func (c *Controller) deleteFunc(obj interface{}) {
 
 func (c *Controller) setStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm.Release) error {
 	//set the initial status
-	c.updateChartMgrStatus(chartmgr, rls, string(rls.StatusName()))
+	c.updateChartMgrStatus(chartmgr, rls, string(rls.Status()))
 
 	// wait for the final status
 	return c.updateStatus(chartmgr, rls)
@@ -150,16 +150,16 @@ func (c *Controller) updateStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm
 		log.Errorf("Failed to verify that release %v deployed: %v", rls.Name, err)
 		c.updateChartMgrStatus(chartmgr, rls, err.Error())
 	} else {
-		log.Infof("Chart Manager %s has deployed release %s", chartmgr.Name, string(rls.StatusName()))
+		log.Infof("Chart Manager %s has deployed release %s", chartmgr.Name, string(rls.Status()))
 		c.updateChartMgrStatus(chartmgr, rls, err.Error())
 	}
 	return err
 }
 
 func (c *Controller) updateChartMgrStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm.Release, message string) {
-	log.Debugf("Updating Chart Manager status: state=%s release=%s", rls.StatusName(), rls.Name())
+	log.Debugf("Updating Chart Manager status: state=%s release=%s", rls.Status(), rls.Name())
 	chartmgr.Status = crv1alpha1.ChartMgrStatus{
-		State:       rls.StatusName(),
+		State:       rls.Status(),
 		ReleaseName: rls.Name(),
 		Message:     message,
 	}

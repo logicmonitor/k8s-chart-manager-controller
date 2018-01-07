@@ -55,6 +55,7 @@ func getRepo(chartmgr *crv1alpha1.ChartManager, settings helm_env.EnvSettings) (
 func writeChart(chartmgr *crv1alpha1.ChartManager, url string, settings helm_env.EnvSettings) (string, error) {
 	name := chartmgr.Spec.Chart.Name
 	version := parseVersion(chartmgr)
+
 	log.Debugf("Looking for chart %s version %s in repo %s", name, version, url)
 
 	curl, err := repo.FindChartInRepoURL(url, name, version, "", "", "", getter.All(settings))

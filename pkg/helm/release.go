@@ -7,7 +7,6 @@ import (
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/constants"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/helm/pkg/helm"
-	"k8s.io/helm/pkg/proto/hapi/chart"
 	rspb "k8s.io/helm/pkg/proto/hapi/release"
 )
 
@@ -25,23 +24,10 @@ func (r *Release) Install() error {
 		return err
 	}
 
-	vals, err := parseValues(r.Chartmgr)
-	if err != nil {
-		return err
-	}
-
-	rls, err := r.installRelease(chart, vals)
-	r.rls = rls
-	return err
-}
-
-func (r *Release) installRelease(chart *chart.Chart, vals []byte) (*rspb.Release, error) {
 	log.Infof("Installing release %s", r.Name())
-	rsp, err := r.Client.Helm.InstallReleaseFromChart(chart, r.Chartmgr.ObjectMeta.Namespace, r.installOpts(vals)...)
-	if err == nil {
-		log.Infof("Installed release %s", rsp.Release.Name)
-	}
-	return rsp.Release, err
+	rsp, err := r.Client.Helm.InstallReleaseFromChart(chart, r.Chartmgr.ObjectMeta.Namespace, r.installOpts()...)
+	r.rls = rsp.Release
+	return err
 }
 
 // Update the release
@@ -56,23 +42,10 @@ func (r *Release) Update() error {
 		return err
 	}
 
-	vals, err := parseValues(r.Chartmgr)
-	if err != nil {
-		return err
-	}
-
-	rls, err := r.updateRelease(chart, vals)
-	r.rls = rls
-	return err
-}
-
-func (r *Release) updateRelease(chart *chart.Chart, vals []byte) (*rspb.Release, error) {
 	log.Infof("Updating release %s", r.Name())
-	rsp, err := r.Client.Helm.UpdateReleaseFromChart(r.Name(), chart, r.updateOpts(vals)...)
-	if err == nil {
-		log.Infof("Updated release %s", r.Name())
-	}
-	return rsp.Release, err
+	rsp, err := r.Client.Helm.UpdateReleaseFromChart(r.Name(), chart, r.updateOpts()...)
+	r.rls = rsp.Release
+	return err
 }
 
 // Delete the release
@@ -88,33 +61,27 @@ func (r *Release) Delete() error {
 		return nil
 	}
 
-	rls, err := r.deleteRelease()
-	r.rls = rls
+	log.Infof("Deleting release %s", r.Name())
+	rsp, err := r.Client.Helm.DeleteRelease(r.Name(), r.deleteOpts()...)
+	r.rls = rsp.Release
 	return err
 }
 
-func (r *Release) deleteRelease() (*rspb.Release, error) {
-	log.Infof("Deleting release %s", r.Name())
-	rsp, err := r.Client.Helm.DeleteRelease(r.Name(), r.deleteOpts()...)
-	if err == nil {
-		log.Infof("Deleted release %s", r.Name())
-	}
-	return rsp.Release, err
-}
-
-func (r *Release) installOpts(values []byte) []helm.InstallOption {
+func (r *Release) installOpts() []helm.InstallOption {
+	vals, _ := parseValues(r.Chartmgr)
 	return []helm.InstallOption{
 		helm.InstallReuseName(true),
 		helm.InstallTimeout(r.Client.Config().ReleaseTimeoutSec),
 		helm.InstallWait(true),
 		helm.ReleaseName(r.Name()),
-		helm.ValueOverrides(values),
+		helm.ValueOverrides(vals),
 	}
 }
 
-func (r *Release) updateOpts(values []byte) []helm.UpdateOption {
+func (r *Release) updateOpts() []helm.UpdateOption {
+	vals, _ := parseValues(r.Chartmgr)
 	return []helm.UpdateOption{
-		helm.UpdateValueOverrides(values),
+		helm.UpdateValueOverrides(vals),
 		helm.UpgradeTimeout(r.Client.Config().ReleaseTimeoutSec),
 		helm.UpgradeWait(true),
 	}
@@ -143,16 +110,11 @@ func (r *Release) listOpts() []helm.ReleaseListOption {
 }
 
 // StatusName returns the name of the release status
-func (r *Release) StatusName() crv1alpha1.ChartMgrState {
+func (r *Release) Status() crv1alpha1.ChartMgrState {
 	if r.rls == nil {
 		return crv1alpha1.ChartMgrStateUnknown
 	}
 	return statusCodeToName(r.rls.Info.Status.Code)
-}
-
-// StatusCode returns the status code of the release
-func (r *Release) StatusCode() rspb.Status_Code {
-	return r.rls.Info.Status.Code
 }
 
 func statusCodeToName(code rspb.Status_Code) crv1alpha1.ChartMgrState {
@@ -198,7 +160,7 @@ func (r *Release) createOnly() bool {
 
 // Deployed indicates whether or not the release is successfully deployed
 func (r *Release) Deployed() bool {
-	return r.StatusCode() == rspb.Status_DEPLOYED
+	return r.rls.Info.Status.Code == rspb.Status_DEPLOYED
 }
 
 // Name returns the name of this release
