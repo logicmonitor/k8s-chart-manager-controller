@@ -81,17 +81,22 @@ func (c *Client) CreateCustomResourceDefinition() (*apiextensionsv1beta1.CustomR
 		return nil, err
 	}
 
-	err = c.waitForCRD(crdName)
+	err = c.verify(crdName)
+	return crd, err
+}
+
+func (c *Client) verify(crdName string) error {
+	err := c.waitForCRD(crdName)
 	if err != nil {
 		log.Errorf("Error creating CRD: %v", err)
 		deleteErr := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(crdName, nil)
 		if deleteErr != nil {
-			return nil, errors.NewAggregate([]error{err, deleteErr})
+			return errors.NewAggregate([]error{err, deleteErr})
 		}
-		return nil, err
+		return err
 	}
 	log.Debugf("Created CRD")
-	return crd, nil
+	return nil
 }
 
 func (c *Client) waitForCRD(crdName string) error {
@@ -101,21 +106,29 @@ func (c *Client) waitForCRD(crdName string) error {
 		if err != nil {
 			return false, err
 		}
+
 		for _, cond := range crd.Status.Conditions {
-			switch cond.Type {
-			case apiextensionsv1beta1.Established:
-				if cond.Status == apiextensionsv1beta1.ConditionTrue {
-					return true, err
-				}
-			case apiextensionsv1beta1.NamesAccepted:
-				if cond.Status == apiextensionsv1beta1.ConditionFalse {
-					log.Warnf("Name conflict: %v\n", cond.Reason)
-				}
+			if c.checkCondition(cond) {
+				return true, err
 			}
 		}
 		return false, err
 	})
 	return err
+}
+
+func (c *Client) checkCondition(cond apiextensionsv1beta1.CustomResourceDefinitionCondition) bool {
+	switch cond.Type {
+	case apiextensionsv1beta1.Established:
+		if cond.Status == apiextensionsv1beta1.ConditionTrue {
+			return true
+		}
+	case apiextensionsv1beta1.NamesAccepted:
+		if cond.Status == apiextensionsv1beta1.ConditionFalse {
+			log.Warnf("Name conflict: %v\n", cond.Reason)
+		}
+	}
+	return false
 }
 
 func (c *Client) getCRD() *apiextensionsv1beta1.CustomResourceDefinition {
@@ -175,11 +188,6 @@ func (c *Client) updateCustomResourceDefinition(crdName string) (*apiextensionsv
 		return nil, err
 	}
 
-	err = c.waitForCRD(crdName)
-	if err != nil {
-		return crd, err
-	}
-
-	log.Debugf("Updated CRD %s", crdName)
-	return crd, nil
+	err = c.verify(crdName)
+	return crd, err
 }
