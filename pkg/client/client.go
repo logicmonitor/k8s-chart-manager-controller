@@ -43,18 +43,15 @@ func NewForConfig(cfg *rest.Config) (*Client, *runtime.Scheme, error) {
 		return nil, nil, err
 	}
 
-	config := *cfg
-	config.GroupVersion = &crv1alpha1.SchemeGroupVersion
-	config.APIPath = "/apis"
-	config.ContentType = runtime.ContentTypeJSON
-	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: serializer.NewCodecFactory(s)}
-	restclient, err := rest.RESTClientFor(&config)
+	restconfig := restConfig(cfg, s)
+
+	restclient, err := rest.RESTClientFor(&restconfig)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// Instantiate the Kubernetes API extensions client.
-	apiextensionsclient, err := apiextensionsclientset.NewForConfig(&config)
+	apiextensionsclient, err := apiextensionsclientset.NewForConfig(&restconfig)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -66,6 +63,15 @@ func NewForConfig(cfg *rest.Config) (*Client, *runtime.Scheme, error) {
 	}
 
 	return c, s, nil
+}
+
+func restConfig(cfg *rest.Config, s *runtime.Scheme) rest.Config {
+	config := *cfg
+	config.GroupVersion = &crv1alpha1.SchemeGroupVersion
+	config.APIPath = "/apis"
+	config.ContentType = runtime.ContentTypeJSON
+	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: serializer.NewCodecFactory(s)}
+	return config
 }
 
 // CreateCustomResourceDefinition creates the CRD for chartmgrs.
