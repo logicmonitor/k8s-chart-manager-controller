@@ -7,6 +7,7 @@ import (
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/constants"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/helm/pkg/helm"
+	"k8s.io/helm/pkg/proto/hapi/chart"
 	rspb "k8s.io/helm/pkg/proto/hapi/release"
 )
 
@@ -29,7 +30,7 @@ func (r *Release) Install() error {
 		return err
 	}
 
-	rls, err := c.installRelease(chart, vals)
+	rls, err := r.installRelease(chart, vals)
 	r.rls = rls
 	return err
 }
@@ -60,7 +61,7 @@ func (r *Release) Update() error {
 		return err
 	}
 
-	rls, err := c.updateRelease(chart, vals)
+	rls, err := r.updateRelease(chart, vals)
 	r.rls = rls
 	return err
 }
@@ -87,12 +88,12 @@ func (r *Release) Delete() error {
 		return nil
 	}
 
-	rls, err := deleteRelease()
+	rls, err := r.deleteRelease()
 	r.rls = rls
 	return err
 }
 
-func (r *Release) deleteRelease(chart, vals []byte) (*rspb.Release, error) {
+func (r *Release) deleteRelease() (*rspb.Release, error) {
 	log.Infof("Deleting release %s", r.Name())
 	rsp, err := r.Client.Helm.DeleteRelease(r.Name(), r.deleteOpts()...)
 	if err == nil {

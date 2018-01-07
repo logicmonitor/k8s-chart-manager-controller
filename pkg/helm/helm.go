@@ -32,32 +32,42 @@ func (c *Client) Init(chartmgrconfig *config.Config, config *rest.Config) error 
 		return err
 	}
 
-	c.Helm, err = c.newHeClient()
+	c.Helm, err = c.newHelmClient()
 	return err
 }
 
 // NewHeClient returns a helm client
-func (c *Client) newHeClient() (*helm.Client, error) {
-	if c.settings.TillerHost == "" {
-		log.Debugf("Creating kubernetes client")
-		client, err := kubernetes.NewForConfig(c.restConfig)
-		if err != nil {
-			return nil, err
-		}
-		log.Debugf("Created kubernetes client")
-
-		log.Debugf("Setting up port forwarding tunnel to tiller")
-		tunnel, err := portforwarder.New(c.settings.TillerNamespace, client, c.restConfig)
-		if err != nil {
-			return nil, err
-		}
-		log.Debugf("Set up port forwarding tunnel to tiller")
-
-		c.settings.TillerHost = fmt.Sprintf("127.0.0.1:%d", tunnel.Local)
+func (c *Client) newHelmClient() (*helm.Client, error) {
+	tillerHost, err := c.tillerHost()
+	if err != nil {
+		return nil, err
 	}
-	log.Infof("Using tiller host %s", c.settings.TillerHost)
-	heClient := helm.NewClient(helm.Host(c.settings.TillerHost))
+
+	log.Infof("Using tiller host %s", tillerHost)
+	heClient := helm.NewClient(helm.Host(tillerHost))
 	return heClient, nil
+}
+
+func (c *Client) tillerHost() (string, error) {
+	if c.settings.TillerHost != "" {
+		return c.settings.TillerHost, nil
+	}
+
+	log.Debugf("Creating kubernetes client")
+	client, err := kubernetes.NewForConfig(c.restConfig)
+	if err != nil {
+		return "", err
+	}
+	log.Debugf("Created kubernetes client")
+
+	log.Debugf("Setting up port forwarding tunnel to tiller")
+	tunnel, err := portforwarder.New(c.settings.TillerNamespace, client, c.restConfig)
+	if err != nil {
+		return "", err
+	}
+	log.Debugf("Set up port forwarding tunnel to tiller")
+
+	return fmt.Sprintf("127.0.0.1:%d", tunnel.Local), nil
 }
 
 // HelmSettings returns the helm client settings
