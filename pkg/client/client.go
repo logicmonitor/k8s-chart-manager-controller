@@ -38,19 +38,7 @@ func NewForConfig(cfg *rest.Config) (*Client, *runtime.Scheme, error) {
 		return nil, nil, err
 	}
 
-	client, err := clientset.NewForConfig(cfg)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	restconfig := restConfig(cfg, s)
-	restclient, err := rest.RESTClientFor(&restconfig)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Instantiate the Kubernetes API extensions client.
-	apiextensionsclient, err := apiextensionsclientset.NewForConfig(&restconfig)
+	client, restclient, apiextensionsclient, err := initClients(cfg, s)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -60,8 +48,27 @@ func NewForConfig(cfg *rest.Config) (*Client, *runtime.Scheme, error) {
 		RESTClient:             restclient,
 		APIExtensionsClientset: apiextensionsclient,
 	}
-
 	return c, s, nil
+}
+
+func initClients(cfg *rest.Config, s *runtime.Scheme) (*clientset.Clientset, *rest.RESTClient, *apiextensionsclientset.Clientset, error) {
+	client, err := clientset.NewForConfig(cfg)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	restconfig := restConfig(cfg, s)
+	restclient, err := rest.RESTClientFor(&restconfig)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// Instantiate the Kubernetes API extensions client.
+	apiextensionsclient, err := apiextensionsclientset.NewForConfig(&restconfig)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return client, restclient, apiextensionsclient, nil
 }
 
 func restConfig(cfg *rest.Config, s *runtime.Scheme) rest.Config {
