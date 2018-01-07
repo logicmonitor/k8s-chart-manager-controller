@@ -1,11 +1,11 @@
 package lmhelm
 
 import (
-	"fmt"
 	"os"
 
 	crv1alpha1 "github.com/logicmonitor/k8s-chart-manager-controller/pkg/apis/v1alpha1"
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/constants"
+	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/utilities"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/helm/pkg/getter"
 	helm_env "k8s.io/helm/pkg/helm/environment"
@@ -125,14 +125,11 @@ func ensureDirectories(home helmpath.Home) error {
 		home.Starters(),
 		home.Archive(),
 	}
+
 	for _, p := range configDirectories {
-		if fi, err := os.Stat(p); err != nil {
-			log.Debugf("Creating directory '%s'", p)
-			if err := os.MkdirAll(p, 0755); err != nil {
-				return err
-			}
-		} else if !fi.IsDir() {
-			return fmt.Errorf("%s must be a directory", p)
+		err := utilities.EnsureDirectory(p)
+		if err != nil {
+			return err
 		}
 	}
 	return nil

@@ -29,15 +29,18 @@ func (r *Release) Install() error {
 		return err
 	}
 
+	rls, err := c.installRelease(chart, vals)
+	r.rls = rls
+	return err
+}
+
+func (r *Release) installRelease(chart *chart.Chart, vals []byte) (*rspb.Release, error) {
 	log.Infof("Installing release %s", r.Name())
 	rsp, err := r.Client.Helm.InstallReleaseFromChart(chart, r.Chartmgr.ObjectMeta.Namespace, r.installOpts(vals)...)
-	if err != nil {
-		return err
+	if err == nil {
+		log.Infof("Installed release %s", rsp.Release.Name)
 	}
-
-	log.Infof("Installed release %s", rsp.Release.Name)
-	r.rls = rsp.Release
-	return nil
+	return rsp.Release, err
 }
 
 // Update the release
@@ -57,15 +60,18 @@ func (r *Release) Update() error {
 		return err
 	}
 
+	rls, err := c.updateRelease(chart, vals)
+	r.rls = rls
+	return err
+}
+
+func (r *Release) updateRelease(chart *chart.Chart, vals []byte) (*rspb.Release, error) {
 	log.Infof("Updating release %s", r.Name())
 	rsp, err := r.Client.Helm.UpdateReleaseFromChart(r.Name(), chart, r.updateOpts(vals)...)
-	if err != nil {
-		return err
+	if err == nil {
+		log.Infof("Updated release %s", r.Name())
 	}
-
-	log.Infof("Updated release %s", r.Name())
-	r.rls = rsp.Release
-	return nil
+	return rsp.Release, err
 }
 
 // Delete the release
@@ -81,14 +87,18 @@ func (r *Release) Delete() error {
 		return nil
 	}
 
+	rls, err := deleteRelease()
+	r.rls = rls
+	return err
+}
+
+func (r *Release) deleteRelease(chart, vals []byte) (*rspb.Release, error) {
 	log.Infof("Deleting release %s", r.Name())
 	rsp, err := r.Client.Helm.DeleteRelease(r.Name(), r.deleteOpts()...)
-	if err != nil {
-		return err
+	if err == nil {
+		log.Infof("Deleted release %s", r.Name())
 	}
-	log.Infof("Deleted release %s", r.Name())
-	r.rls = rsp.Release
-	return nil
+	return rsp.Release, err
 }
 
 func (r *Release) installOpts(values []byte) []helm.InstallOption {

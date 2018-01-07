@@ -157,7 +157,6 @@ func (c *Controller) checkStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm.
 	}
 
 	log.Infof("Chart Manager %s has deployed release %s", chartmgr.Name, rls.Name())
-
 	err = c.updateChartMgrStatus(chartmgr, rls, string(rls.StatusName()))
 	if err != nil {
 		log.Errorf("Failed to update Chart Manager status: %v", err)
