@@ -79,6 +79,10 @@ func (r *Release) Delete() error {
 		return nil
 	}
 
+	return r.helmDelete()
+}
+
+func (r *Release) helmDelete() error {
 	log.Infof("Deleting release %s", r.Name())
 	rsp, err := r.Client.Helm.DeleteRelease(r.Name(), r.deleteOpts()...)
 	r.rls = rsp.Release
@@ -125,7 +129,7 @@ func (r *Release) listOpts() []helm.ReleaseListOption {
 	}
 }
 
-// StatusName returns the name of the release status
+// Status returns the name of the release status
 func (r *Release) Status() crv1alpha1.ChartMgrState {
 	if r.rls == nil {
 		return crv1alpha1.ChartMgrStateUnknown
