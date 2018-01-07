@@ -78,12 +78,11 @@ func (c *Client) CreateCustomResourceDefinition() (*apiextensionsv1beta1.CustomR
 	crd := c.getCRD()
 
 	log.Infof("Creating CRD %s", crdName)
-	_, err := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
+	crd, err := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
 	if err != nil {
 		if !strings.Contains(err.Error(), "already exists") {
 			return nil, err
 		}
-		log.Warnf("CRD %s already exists. Attempting to update.", crdName)
 		return c.updateCustomResourceDefinition(crdName)
 	}
 	return crd, c.verify(crdName)
@@ -183,6 +182,7 @@ func (c *Client) GetCRDString(format string) string {
 }
 
 func (c *Client) updateCustomResourceDefinition(crdName string) (*apiextensionsv1beta1.CustomResourceDefinition, error) {
+	log.Warnf("CRD %s already exists. Attempting to update.", crdName)
 	crd, err := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crdName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
