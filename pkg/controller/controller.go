@@ -106,13 +106,7 @@ func (c *Controller) addFunc(obj interface{}) {
 		return
 	}
 
-	err = c.updateChartMgrStatus(chartmgr, rls, string(rls.StatusName()))
-	if err != nil {
-		log.Errorf("Failed to update Chart Manager status: %v", err)
-		return
-	}
-
-	err = c.updateStatus(chartmgr, rls)
+	err = c.setStatus(chartmgr, rls)
 	if err != nil {
 		return
 	}
@@ -136,7 +130,7 @@ func (c *Controller) updateFunc(oldObj, newObj interface{}) {
 		return
 	}
 
-	err = c.updateStatus(newChartMgr, rls)
+	err = c.setStatus(newChartMgr, rls)
 	if err != nil {
 		return
 	}
@@ -152,6 +146,17 @@ func (c *Controller) deleteFunc(obj interface{}) {
 		return
 	}
 	log.Infof("Deleted Chart Manager: %s", chartmgr.Name)
+}
+
+func (c *Controller) setStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm.Release) error {
+	//set the initial status
+	err = c.updateChartMgrStatus(chartmgr, rls, string(rls.StatusName()))
+	if err != nil {
+		log.Errorf("Failed to update Chart Manager status: %v", err)
+		return
+	}
+
+	return updateStatus(chartmgr, rls)
 }
 
 func (c *Controller) updateStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm.Release) error {
