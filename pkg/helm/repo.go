@@ -32,26 +32,24 @@ func addRepo(name string, url string, settings helm_env.EnvSettings) error {
 		return nil
 	}
 
-	c := repoEntry(name, settings.Home.CacheIndex(name), url)
-	r, err := createRepo(name, c, url, settings)
+	r, err := createRepo(name, url, settings)
 	if err != nil {
 		return err
 	}
-	return initRepo(r, c, settings)
+	return initRepo(r, settings)
 }
 
 func repoEntry(name string, cache string, url string) repo.Entry {
-	log.Debugf("Creating entry for repository %s", name)
-	r := repo.Entry{
+	return repo.Entry{
 		Name:  name,
 		Cache: cache,
 		URL:   url,
 	}
-	log.Debugf("Created entry for repository %s", name)
-	return r
 }
 
-func createRepo(name string, c repo.Entry, url string, settings helm_env.EnvSettings) (*repo.ChartRepository, error) {
+func createRepo(name string, url string, settings helm_env.EnvSettings) (*repo.ChartRepository, error) {
+	c := repoEntry(name, settings.Home.CacheIndex(name), url)
+
 	log.Debugf("Creating chart repository %s from %s", name, url)
 	r, err := repo.NewChartRepository(&c, getter.All(settings))
 	if err != nil {
@@ -73,6 +71,8 @@ func initRepo(r *repo.ChartRepository, c repo.Entry, settings helm_env.EnvSettin
 }
 
 func initRepoFile(c repo.Entry, repoFile string) error {
+	c := repoEntry(name, settings.Home.CacheIndex(name), url)
+
 	// check if repo files have already been created
 	_, err := os.Stat(repoFile)
 	if err != nil {
