@@ -19,12 +19,17 @@ func getChart(chartmgr *crv1alpha1.ChartManager, settings helm_env.EnvSettings) 
 	name := chartmgr.Spec.Chart.Name
 	version := parseVersion(chartmgr)
 
+	err := ensureDirectories(settings.Home)
+	if err != nil {
+		return nil, err
+	}
+
 	url, err := getRepo(chartmgr, settings)
 	if err != nil {
 		return nil, err
 	}
 
-	chartFile, err := downloadChart(name, version, url, settings)
+	chartFile, err := writeChart(name, version, url, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -50,19 +55,24 @@ func getRepo(chartmgr *crv1alpha1.ChartManager, settings helm_env.EnvSettings) (
 	return url, nil
 }
 
-func downloadChart(name string, version string, url string, settings helm_env.EnvSettings) (string, error) {
+func writeChart(name string, version string, url string, settings helm_env.EnvSettings) (string, error) {
 	log.Debugf("Looking for chart %s version %s in repo %s", name, version, url)
 
-	url, err := repo.FindChartInRepoURL(url, name, version, "", "", "", getter.All(settings))
+	curl, err := repo.FindChartInRepoURL(url, name, version, "", "", "", getter.All(settings))
 	if err != nil {
 		return "", err
 	}
-	log.Debugf("Chart URL found: %s", url)
+	log.Debugf("Chart URL found: %s", curl)
 
-	dl := getDownloader(settings)
-	err = ensureDirectories(settings.Home)
-	if err != nil {
-		return "", err
+	return downloadChart(curl, version, settings)
+}
+
+func downloadChart(url string, version string, settings helm_env.EnvSettings) (string, error) {
+	dl := downloader.ChartDownloader{
+		HelmHome: settings.Home,
+		Out:      os.Stdout,
+		Getters:  getter.All(settings),
+		Verify:   downloader.VerifyIfPossible,
 	}
 
 	log.Debugf("Downloading chart %s to %s", url, settings.Home.Archive())
@@ -72,16 +82,6 @@ func downloadChart(name string, version string, url string, settings helm_env.En
 	}
 	log.Debugf("Downloaded chart from URL %s to %s", url, filename)
 	return filename, nil
-}
-
-func getDownloader(settings helm_env.EnvSettings) downloader.ChartDownloader {
-	// TODO we should probably support TLS options in the future
-	return downloader.ChartDownloader{
-		HelmHome: settings.Home,
-		Out:      os.Stdout,
-		Getters:  getter.All(settings),
-		Verify:   downloader.VerifyIfPossible,
-	}
 }
 
 func loadChart(filename string) (*chart.Chart, error) {

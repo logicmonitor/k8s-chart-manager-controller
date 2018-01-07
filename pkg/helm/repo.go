@@ -98,22 +98,19 @@ func addRepoFile(c repo.Entry, repoFile string) error {
 
 func updateRepoFile(c repo.Entry, repoFile string) error {
 	log.Debugf("Loading repositories from %s", repoFile)
-	f, lerr := repo.LoadRepositoriesFile(repoFile)
-	if lerr != nil {
-		return lerr
-	}
-	log.Debugf("Loaded repositories from %s", repoFile)
-
-	log.Debugf("Updating repository %s", repoFile)
-	f.Update(&c)
-	log.Debugf("Updated repository %s", repoFile)
-
-	log.Debugf("Writing repository file %s", repoFile)
-	err := f.WriteFile(repoFile, 0644)
+	f, err := repo.LoadRepositoriesFile(repoFile)
 	if err != nil {
 		return err
 	}
-	log.Debugf("Wrote repository file %s", repoFile)
+
+	log.Debugf("Updating repository %s", repoFile)
+	f.Update(&c)
+
+	log.Debugf("Writing repository file %s", repoFile)
+	err = f.WriteFile(repoFile, 0644)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
