@@ -6,7 +6,6 @@ import (
 	crv1alpha1 "github.com/logicmonitor/k8s-chart-manager-controller/pkg/apis/v1alpha1"
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/constants"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/helm/pkg/helm"
 	"k8s.io/helm/pkg/proto/hapi/chart"
 	rspb "k8s.io/helm/pkg/proto/hapi/release"
 )
@@ -35,14 +34,14 @@ func (r *Release) Install() error {
 
 func (r *Release) helmInstall(chart *chart.Chart, vals []byte) error {
 	log.Infof("Installing release %s", r.Name())
-	rsp, err := r.Client.Helm.InstallReleaseFromChart(chart, r.Chartmgr.ObjectMeta.Namespace, r.installOpts(vals)...)
+	rsp, err := r.Client.Helm.InstallReleaseFromChart(chart, r.Chartmgr.ObjectMeta.Namespace, installOpts(r, vals)...)
 	r.rls = rsp.Release
 	return err
 }
 
 // Update the release
 func (r *Release) Update() error {
-	if r.createOnly() {
+	if createOnly(r.Chartmgr) {
 		log.Infof("CreateOnly mode. Ignoring update of release %s.", r.Name())
 		return nil
 	}
@@ -61,14 +60,14 @@ func (r *Release) Update() error {
 
 func (r *Release) helmUpdate(chart *chart.Chart, vals []byte) error {
 	log.Infof("Updating release %s", r.Name())
-	rsp, err := r.Client.Helm.UpdateReleaseFromChart(r.Name(), chart, r.updateOpts(vals)...)
+	rsp, err := r.Client.Helm.UpdateReleaseFromChart(r.Name(), chart, updateOpts(r, vals)...)
 	r.rls = rsp.Release
 	return err
 }
 
 // Delete the release
 func (r *Release) Delete() error {
-	if r.createOnly() {
+	if createOnly(r.Chartmgr) {
 		log.Infof("CreateOnly mode. Ignoring delete of release %s.", r.Name())
 		return nil
 	}
@@ -84,49 +83,9 @@ func (r *Release) Delete() error {
 
 func (r *Release) helmDelete() error {
 	log.Infof("Deleting release %s", r.Name())
-	rsp, err := r.Client.Helm.DeleteRelease(r.Name(), r.deleteOpts()...)
+	rsp, err := r.Client.Helm.DeleteRelease(r.Name(), deleteOpts(r)...)
 	r.rls = rsp.Release
 	return err
-}
-
-func (r *Release) installOpts(vals []byte) []helm.InstallOption {
-	return []helm.InstallOption{
-		helm.InstallReuseName(true),
-		helm.InstallTimeout(r.Client.Config().ReleaseTimeoutSec),
-		helm.InstallWait(true),
-		helm.ReleaseName(r.Name()),
-		helm.ValueOverrides(vals),
-	}
-}
-
-func (r *Release) updateOpts(vals []byte) []helm.UpdateOption {
-	return []helm.UpdateOption{
-		helm.UpdateValueOverrides(vals),
-		helm.UpgradeTimeout(r.Client.Config().ReleaseTimeoutSec),
-		helm.UpgradeWait(true),
-	}
-}
-
-func (r *Release) deleteOpts() []helm.DeleteOption {
-	return []helm.DeleteOption{
-		helm.DeletePurge(true),
-		helm.DeleteTimeout(r.Client.Config().ReleaseTimeoutSec),
-	}
-}
-
-func (r *Release) listOpts() []helm.ReleaseListOption {
-	return []helm.ReleaseListOption{
-		helm.ReleaseListFilter(r.Name()),
-		helm.ReleaseListStatuses([]rspb.Status_Code{
-			rspb.Status_DELETING,
-			rspb.Status_DEPLOYED,
-			rspb.Status_FAILED,
-			rspb.Status_PENDING_INSTALL,
-			rspb.Status_PENDING_ROLLBACK,
-			rspb.Status_PENDING_UPGRADE,
-			rspb.Status_UNKNOWN,
-		}),
-	}
 }
 
 // Status returns the name of the release status
@@ -171,8 +130,8 @@ func statusCodeToName(code rspb.Status_Code) crv1alpha1.ChartMgrState {
 	}
 }
 
-func (r *Release) createOnly() bool {
-	if r.Chartmgr.Spec.Options != nil && r.Chartmgr.Spec.Options.CreateOnly {
+func createOnly(chartmgr *crv1alpha1.ChartManager) bool {
+	if chartmgr.Spec.Options != nil && chartmgr.Spec.Options.CreateOnly {
 		return true
 	}
 	return false
@@ -214,7 +173,7 @@ func (r *Release) Exists() bool {
 func (r *Release) getInstalledRelease() (*rspb.Release, error) {
 	// try to list the release and determine if it already exists
 	log.Debugf("Attempting to locate helm release with filter %s", r.Name())
-	rsp, err := r.Client.Helm.ListReleases(r.listOpts()...)
+	rsp, err := r.Client.Helm.ListReleases(listOpts(r)...)
 	if err != nil {
 		return nil, err
 	}
