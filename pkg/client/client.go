@@ -188,7 +188,6 @@ func (c *Client) updateCustomResourceDefinition(crdName string) (*apiextensionsv
 		return nil, err
 	}
 
-	log.Debugf("Updating CRD %s", crdName)
 	crd, err = c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Update(crd)
 	if err != nil {
 		return nil, err
