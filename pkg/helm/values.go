@@ -12,7 +12,18 @@ import (
 
 func parseValues(chartmgr *crv1alpha1.ChartManager) ([]byte, error) {
 	log.Debugf("Parsing values")
-	base := map[string]interface{}{}
+
+	s := valuesToString(chartmgr)
+	y, err := stringValuesToYaml(s)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debugf("Parsed values")
+	return y, nil
+}
+
+func valuesToString(chartmgr *crv1alpha1.ChartManager) string {
 	vals := []string{}
 
 	// iterate our name value pair and format as string
@@ -24,21 +35,18 @@ func parseValues(chartmgr *crv1alpha1.ChartManager) ([]byte, error) {
 		}
 		vals = append(vals, fmt.Sprintf("%s=%s", value.Name, value.Value))
 	}
+	return strings.Join(vals[:], ",")
+}
 
+func stringValuesToYaml(s string) ([]byte, error) {
+	base := map[string]interface{}{}
 	// join k/v string and parse
-	v := strings.Join(vals[:], ",")
-	err := strvals.ParseInto(v, base)
+	err := strvals.ParseInto(s, base)
 	if err != nil {
 		return nil, err
 	}
 
-	y, err := yaml.Marshal(base)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Debugf("Parsed values")
-	return y, nil
+	return yaml.Marshal(base)
 }
 
 func validateValue(value *crv1alpha1.ChartMgrValuePair) bool {

@@ -155,20 +155,22 @@ func (c *Controller) deleteFunc(obj interface{}) {
 }
 
 func (c *Controller) updateStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm.Release) error {
+	var status string
 	err := c.waitForReleaseToDeploy(rls)
 	if err != nil {
-		_ = c.updateChartMgrStatus(chartmgr, rls, err.Error())
+		status = err.Error()
 		log.Errorf("Failed to verify that release %v deployed: %v", rls.Name, err)
-		return err
+	} else {
+		status = string(rls.StatusName())
+		log.Infof("Chart Manager %s has deployed release %s", chartmgr.Name, rls.Name())
 	}
 
-	log.Infof("Chart Manager %s has deployed release %s", chartmgr.Name, rls.Name())
-	err = c.updateChartMgrStatus(chartmgr, rls, string(rls.StatusName()))
+	err = c.updateChartMgrStatus(chartmgr, rls, status)
 	if err != nil {
 		log.Errorf("Failed to update Chart Manager status: %v", err)
 		return err
 	}
-	return nil
+	return err
 }
 
 func (c *Controller) updateChartMgrStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm.Release, message string) error {
