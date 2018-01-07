@@ -16,9 +16,6 @@ import (
 )
 
 func getChart(chartmgr *crv1alpha1.ChartManager, settings helm_env.EnvSettings) (*chart.Chart, error) {
-	name := chartmgr.Spec.Chart.Name
-	version := parseVersion(chartmgr)
-
 	err := ensureDirectories(settings.Home)
 	if err != nil {
 		return nil, err
@@ -29,7 +26,7 @@ func getChart(chartmgr *crv1alpha1.ChartManager, settings helm_env.EnvSettings) 
 		return nil, err
 	}
 
-	chartFile, err := writeChart(name, version, url, settings)
+	chartFile, err := writeChart(chartmgr, url, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +52,9 @@ func getRepo(chartmgr *crv1alpha1.ChartManager, settings helm_env.EnvSettings) (
 	return url, nil
 }
 
-func writeChart(name string, version string, url string, settings helm_env.EnvSettings) (string, error) {
+func writeChart(chartmgr *crv1alpha1.ChartManager, url string, settings helm_env.EnvSettings) (string, error) {
+	name := chartmgr.Spec.Chart.Name
+	version := parseVersion(chartmgr)
 	log.Debugf("Looking for chart %s version %s in repo %s", name, version, url)
 
 	curl, err := repo.FindChartInRepoURL(url, name, version, "", "", "", getter.All(settings))
