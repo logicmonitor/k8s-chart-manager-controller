@@ -7,6 +7,7 @@ import (
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/constants"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/helm/pkg/helm"
+	"k8s.io/helm/pkg/proto/hapi/chart"
 	rspb "k8s.io/helm/pkg/proto/hapi/release"
 )
 
@@ -24,8 +25,17 @@ func (r *Release) Install() error {
 		return err
 	}
 
+	vals, err := parseValues(r.Chartmgr)
+	if err != nil {
+		return err
+	}
+
+	return r.helmInstall(chart, vals)
+}
+
+func (r *Release) helmInstall(chart *chart.Chart, vals []byte) error {
 	log.Infof("Installing release %s", r.Name())
-	rsp, err := r.Client.Helm.InstallReleaseFromChart(chart, r.Chartmgr.ObjectMeta.Namespace, r.installOpts()...)
+	rsp, err := r.Client.Helm.InstallReleaseFromChart(chart, r.Chartmgr.ObjectMeta.Namespace, r.installOpts(vals)...)
 	r.rls = rsp.Release
 	return err
 }
@@ -42,8 +52,16 @@ func (r *Release) Update() error {
 		return err
 	}
 
+	vals, err := parseValues(r.Chartmgr)
+	if err != nil {
+		return err
+	}
+	return r.helmUpdate(chart, vals)
+}
+
+func (r *Release) helmUpdate(chart *chart.Chart, vals []byte) error {
 	log.Infof("Updating release %s", r.Name())
-	rsp, err := r.Client.Helm.UpdateReleaseFromChart(r.Name(), chart, r.updateOpts()...)
+	rsp, err := r.Client.Helm.UpdateReleaseFromChart(r.Name(), chart, r.updateOpts(vals)...)
 	r.rls = rsp.Release
 	return err
 }
@@ -67,8 +85,7 @@ func (r *Release) Delete() error {
 	return err
 }
 
-func (r *Release) installOpts() []helm.InstallOption {
-	vals, _ := parseValues(r.Chartmgr)
+func (r *Release) installOpts(vals []byte) []helm.InstallOption {
 	return []helm.InstallOption{
 		helm.InstallReuseName(true),
 		helm.InstallTimeout(r.Client.Config().ReleaseTimeoutSec),
@@ -78,8 +95,7 @@ func (r *Release) installOpts() []helm.InstallOption {
 	}
 }
 
-func (r *Release) updateOpts() []helm.UpdateOption {
-	vals, _ := parseValues(r.Chartmgr)
+func (r *Release) updateOpts(vals []byte) []helm.UpdateOption {
 	return []helm.UpdateOption{
 		helm.UpdateValueOverrides(vals),
 		helm.UpgradeTimeout(r.Client.Config().ReleaseTimeoutSec),
