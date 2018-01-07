@@ -106,26 +106,22 @@ func (c *Client) waitForCRD(crdName string) error {
 		if err != nil {
 			return false, err
 		}
-
-		for _, cond := range crd.Status.Conditions {
-			if c.checkCondition(cond) {
-				return true, err
-			}
-		}
-		return false, err
+		return c.checkCRDStatus(crd), err
 	})
 	return err
 }
 
-func (c *Client) checkCondition(cond apiextensionsv1beta1.CustomResourceDefinitionCondition) bool {
-	switch cond.Type {
-	case apiextensionsv1beta1.Established:
-		if cond.Status == apiextensionsv1beta1.ConditionTrue {
-			return true
-		}
-	case apiextensionsv1beta1.NamesAccepted:
-		if cond.Status == apiextensionsv1beta1.ConditionFalse {
-			log.Warnf("Name conflict: %v\n", cond.Reason)
+func (c *Client) checkCRDStatus(crd *apiextensionsv1beta1.CustomResourceDefinition) bool {
+	for _, cond := range crd.Status.Conditions {
+		switch cond.Type {
+		case apiextensionsv1beta1.Established:
+			if cond.Status == apiextensionsv1beta1.ConditionTrue {
+				return true
+			}
+		case apiextensionsv1beta1.NamesAccepted:
+			if cond.Status == apiextensionsv1beta1.ConditionFalse {
+				log.Warnf("Name conflict: %v\n", cond.Reason)
+			}
 		}
 	}
 	return false
