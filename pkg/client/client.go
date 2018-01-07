@@ -44,7 +44,6 @@ func NewForConfig(cfg *rest.Config) (*Client, *runtime.Scheme, error) {
 	}
 
 	restconfig := restConfig(cfg, s)
-
 	restclient, err := rest.RESTClientFor(&restconfig)
 	if err != nil {
 		return nil, nil, err
@@ -81,14 +80,13 @@ func (c *Client) CreateCustomResourceDefinition() (*apiextensionsv1beta1.CustomR
 	log.Infof("Creating CRD %s", crdName)
 	_, err := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
 	if err != nil {
-		if strings.Contains(err.Error(), "already exists") {
-			return c.updateCustomResourceDefinition(crdName)
+		if !strings.Contains(err.Error(), "already exists") {
+			return nil, err
 		}
-		return nil, err
+		log.Warnf("CRD %s already exists. Attempting to update.", crdName)
+		return c.updateCustomResourceDefinition(crdName)
 	}
-
-	err = c.verify(crdName)
-	return crd, err
+	return crd, c.verify(crdName)
 }
 
 func (c *Client) verify(crdName string) error {
@@ -185,18 +183,15 @@ func (c *Client) GetCRDString(format string) string {
 }
 
 func (c *Client) updateCustomResourceDefinition(crdName string) (*apiextensionsv1beta1.CustomResourceDefinition, error) {
-	log.Warnf("CRD %s already exists. Attempting to update.", crdName)
 	crd, err := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crdName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	log.Debugf("Updating CRD %s", crdName)
-	_, err = c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Update(crd)
+	crd, err = c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Update(crd)
 	if err != nil {
 		return nil, err
 	}
-
-	err = c.verify(crdName)
-	return crd, err
+	return crd, c.verify(crdName)
 }
