@@ -32,11 +32,12 @@ func addRepo(name string, url string, settings helm_env.EnvSettings) error {
 		return nil
 	}
 
-	r, err := createRepo(name, url, settings)
+	c := repoEntry(name, settings.Home.CacheIndex(name), url)
+	r, err := createRepo(c, url, settings)
 	if err != nil {
 		return err
 	}
-	return initRepo(r, settings)
+	return initRepo(r, c, settings)
 }
 
 func repoEntry(name string, cache string, url string) repo.Entry {
@@ -47,16 +48,9 @@ func repoEntry(name string, cache string, url string) repo.Entry {
 	}
 }
 
-func createRepo(name string, url string, settings helm_env.EnvSettings) (*repo.ChartRepository, error) {
-	c := repoEntry(name, settings.Home.CacheIndex(name), url)
-
-	log.Debugf("Creating chart repository %s from %s", name, url)
-	r, err := repo.NewChartRepository(&c, getter.All(settings))
-	if err != nil {
-		return nil, err
-	}
-	log.Debugf("Created chart repository %s from %s", name, url)
-	return r, nil
+func createRepo(c repo.Entry, url string, settings helm_env.EnvSettings) (*repo.ChartRepository, error) {
+	log.Debugf("Creating chart repository from %s", url)
+	return repo.NewChartRepository(&c, getter.All(settings))
 }
 
 func initRepo(r *repo.ChartRepository, c repo.Entry, settings helm_env.EnvSettings) error {
@@ -65,14 +59,10 @@ func initRepo(r *repo.ChartRepository, c repo.Entry, settings helm_env.EnvSettin
 	if err != nil {
 		return err
 	}
-	log.Debugf("Downloaded index file to %s", settings.Home.Cache())
-
 	return initRepoFile(c, settings.Home.RepositoryFile())
 }
 
 func initRepoFile(c repo.Entry, repoFile string) error {
-	c := repoEntry(name, settings.Home.CacheIndex(name), url)
-
 	// check if repo files have already been created
 	_, err := os.Stat(repoFile)
 	if err != nil {
@@ -85,15 +75,9 @@ func addRepoFile(c repo.Entry, repoFile string) error {
 	log.Debugf("Adding repository %s", repoFile)
 	f := repo.NewRepoFile()
 	f.Add(&c)
-	log.Debugf("Added repository %s", repoFile)
 
 	log.Debugf("Writing repository file %s", repoFile)
-	err := f.WriteFile(repoFile, 0644)
-	if err != nil {
-		return err
-	}
-	log.Debugf("Wrote repository file %s", repoFile)
-	return nil
+	return f.WriteFile(repoFile, 0644)
 }
 
 func updateRepoFile(c repo.Entry, repoFile string) error {
@@ -107,11 +91,7 @@ func updateRepoFile(c repo.Entry, repoFile string) error {
 	f.Update(&c)
 
 	log.Debugf("Writing repository file %s", repoFile)
-	err = f.WriteFile(repoFile, 0644)
-	if err != nil {
-		return err
-	}
-	return nil
+	return f.WriteFile(repoFile, 0644)
 }
 
 func ensureDirectories(home helmpath.Home) error {
