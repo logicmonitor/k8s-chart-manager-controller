@@ -38,25 +38,29 @@ func NewForConfig(cfg *rest.Config) (*Client, *runtime.Scheme, error) {
 		return nil, nil, err
 	}
 
-	client, err := clientset.NewForConfig(cfg)
+	c, err := initClients(cfg, s)
 	if err != nil {
 		return nil, nil, err
 	}
+	return c, s, nil
+}
 
-	config := *cfg
-	config.GroupVersion = &crv1alpha1.SchemeGroupVersion
-	config.APIPath = "/apis"
-	config.ContentType = runtime.ContentTypeJSON
-	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: serializer.NewCodecFactory(s)}
-	restclient, err := rest.RESTClientFor(&config)
+func initClients(cfg *rest.Config, s *runtime.Scheme) (*Client, error) {
+	client, err := clientset.NewForConfig(cfg)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+
+	restconfig := restConfig(cfg, s)
+	restclient, err := rest.RESTClientFor(&restconfig)
+	if err != nil {
+		return nil, err
 	}
 
 	// Instantiate the Kubernetes API extensions client.
-	apiextensionsclient, err := apiextensionsclientset.NewForConfig(&config)
+	apiextensionsclient, err := apiextensionsclientset.NewForConfig(&restconfig)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	c := &Client{
@@ -64,8 +68,16 @@ func NewForConfig(cfg *rest.Config) (*Client, *runtime.Scheme, error) {
 		RESTClient:             restclient,
 		APIExtensionsClientset: apiextensionsclient,
 	}
+	return c, nil
+}
 
-	return c, s, nil
+func restConfig(cfg *rest.Config, s *runtime.Scheme) rest.Config {
+	config := *cfg
+	config.GroupVersion = &crv1alpha1.SchemeGroupVersion
+	config.APIPath = "/apis"
+	config.ContentType = runtime.ContentTypeJSON
+	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: serializer.NewCodecFactory(s)}
+	return config
 }
 
 // CreateCustomResourceDefinition creates the CRD for chartmgrs.
@@ -73,25 +85,28 @@ func (c *Client) CreateCustomResourceDefinition() (*apiextensionsv1beta1.CustomR
 	crd := c.getCRD()
 
 	log.Infof("Creating CRD %s", crdName)
-	_, err := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
+	crd, err := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
 	if err != nil {
-		if strings.Contains(err.Error(), "already exists") {
-			return c.updateCustomResourceDefinition(crdName)
+		if !strings.Contains(err.Error(), "already exists") {
+			return nil, err
 		}
-		return nil, err
+		return c.updateCustomResourceDefinition(crdName)
 	}
+	return crd, c.verify(crdName)
+}
 
-	err = c.waitForCRD(crdName)
+func (c *Client) verify(crdName string) error {
+	err := c.waitForCRD(crdName)
 	if err != nil {
 		log.Errorf("Error creating CRD: %v", err)
 		deleteErr := c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Delete(crdName, nil)
 		if deleteErr != nil {
-			return nil, errors.NewAggregate([]error{err, deleteErr})
+			return errors.NewAggregate([]error{err, deleteErr})
 		}
-		return nil, err
+		return err
 	}
 	log.Debugf("Created CRD")
-	return crd, nil
+	return nil
 }
 
 func (c *Client) waitForCRD(crdName string) error {
@@ -101,21 +116,32 @@ func (c *Client) waitForCRD(crdName string) error {
 		if err != nil {
 			return false, err
 		}
-		for _, cond := range crd.Status.Conditions {
-			switch cond.Type {
-			case apiextensionsv1beta1.Established:
-				if cond.Status == apiextensionsv1beta1.ConditionTrue {
-					return true, err
-				}
-			case apiextensionsv1beta1.NamesAccepted:
-				if cond.Status == apiextensionsv1beta1.ConditionFalse {
-					log.Warnf("Name conflict: %v\n", cond.Reason)
-				}
-			}
-		}
-		return false, err
+		return c.checkCRDStatus(crd), err
 	})
 	return err
+}
+
+func (c *Client) checkCRDStatus(crd *apiextensionsv1beta1.CustomResourceDefinition) bool {
+	for _, cond := range crd.Status.Conditions {
+		if c.checkCondition(cond) {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Client) checkCondition(cond apiextensionsv1beta1.CustomResourceDefinitionCondition) bool {
+	switch cond.Type {
+	case apiextensionsv1beta1.Established:
+		if cond.Status == apiextensionsv1beta1.ConditionTrue {
+			return true
+		}
+	case apiextensionsv1beta1.NamesAccepted:
+		if cond.Status == apiextensionsv1beta1.ConditionFalse {
+			log.Warnf("Name conflict: %v\n", cond.Reason)
+		}
+	}
+	return false
 }
 
 func (c *Client) getCRD() *apiextensionsv1beta1.CustomResourceDefinition {
@@ -169,17 +195,9 @@ func (c *Client) updateCustomResourceDefinition(crdName string) (*apiextensionsv
 		return nil, err
 	}
 
-	log.Debugf("Updating CRD %s", crdName)
-	_, err = c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Update(crd)
+	crd, err = c.APIExtensionsClientset.ApiextensionsV1beta1().CustomResourceDefinitions().Update(crd)
 	if err != nil {
 		return nil, err
 	}
-
-	err = c.waitForCRD(crdName)
-	if err != nil {
-		return crd, err
-	}
-
-	log.Debugf("Updated CRD %s", crdName)
-	return crd, nil
+	return crd, c.verify(crdName)
 }

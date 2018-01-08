@@ -24,7 +24,7 @@ test_packages() {
 
 lint_packages() {
   echo "Linting packages"
-  gometalinter --aggregate --vendor --vendored-linters --enable-gc --exclude="zz_generated" --enable-all --disable=gas --disable=gotype --disable=lll --disable=safesql --deadline=1200s ./...
+  gometalinter --aggregate --vendor --vendored-linters --enable-gc --exclude="zz_generated" --enable-all --disable=gas --disable=gotype --disable=lll --disable=safesql --deadline=1200s --disable=unparam ./...
 }
 
 format_files() {

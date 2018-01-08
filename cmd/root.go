@@ -61,16 +61,7 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		// Search config in home directory with name ".k8s-chart-manager-controller" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".k8s-chart-manager-controller")
+		setDefaultConfig()
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
@@ -79,4 +70,17 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+func setDefaultConfig() {
+	// Find home directory.
+	home, err := homedir.Dir()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	// Search config in home directory with name ".k8s-chart-manager-controller" (without extension).
+	viper.AddConfigPath(home)
+	viper.SetConfigName(".k8s-chart-manager-controller")
 }
