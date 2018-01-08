@@ -1,2 +1,3 @@
 api/**
 vendor/**
+zz_generated_deepcopy.go
