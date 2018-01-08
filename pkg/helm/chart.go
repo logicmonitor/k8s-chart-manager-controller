@@ -101,7 +101,7 @@ func loadChart(filename string) (*chart.Chart, error) {
 
 func parseVersion(chartmgr *crv1alpha1.ChartManager) string {
 	if chartmgr.Spec.Chart.Version == "" {
-		return "latest"
+		return ""
 	}
 	return chartmgr.Spec.Chart.Version
 }

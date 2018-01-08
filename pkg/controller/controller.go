@@ -96,6 +96,7 @@ func (c *Controller) addFunc(obj interface{}) {
 	chartmgr := obj.(*crv1alpha1.ChartManager)
 	rls, err := CreateOrUpdateChartMgr(chartmgr, c.HelmClient)
 	if err != nil {
+		log.Errorf("%s", err)
 		c.updateChartMgrStatus(chartmgr, rls, err.Error())
 		return
 	}
@@ -114,6 +115,7 @@ func (c *Controller) updateFunc(oldObj, newObj interface{}) {
 
 	rls, err := CreateOrUpdateChartMgr(newChartMgr, c.HelmClient)
 	if err != nil {
+		log.Errorf("%s", err)
 		c.updateChartMgrStatus(newChartMgr, rls, err.Error())
 		return
 	}

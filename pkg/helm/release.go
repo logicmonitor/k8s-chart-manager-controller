@@ -28,14 +28,15 @@ func (r *Release) Install() error {
 	if err != nil {
 		return err
 	}
-
 	return r.helmInstall(chart, vals)
 }
 
 func (r *Release) helmInstall(chart *chart.Chart, vals []byte) error {
 	log.Infof("Installing release %s", r.Name())
 	rsp, err := r.Client.Helm.InstallReleaseFromChart(chart, r.Chartmgr.ObjectMeta.Namespace, installOpts(r, vals)...)
-	r.rls = rsp.Release
+	if err == nil {
+		r.rls = rsp.Release
+	}
 	return err
 }
 
@@ -61,7 +62,9 @@ func (r *Release) Update() error {
 func (r *Release) helmUpdate(chart *chart.Chart, vals []byte) error {
 	log.Infof("Updating release %s", r.Name())
 	rsp, err := r.Client.Helm.UpdateReleaseFromChart(r.Name(), chart, updateOpts(r, vals)...)
-	r.rls = rsp.Release
+	if err == nil {
+		r.rls = rsp.Release
+	}
 	return err
 }
 
@@ -77,20 +80,21 @@ func (r *Release) Delete() error {
 		log.Infof("Can't delete release %s because it doesn't exist", r.Name())
 		return nil
 	}
-
 	return r.helmDelete()
 }
 
 func (r *Release) helmDelete() error {
 	log.Infof("Deleting release %s", r.Name())
 	rsp, err := r.Client.Helm.DeleteRelease(r.Name(), deleteOpts(r)...)
-	r.rls = rsp.Release
+	if err == nil {
+		r.rls = rsp.Release
+	}
 	return err
 }
 
 // Status returns the name of the release status
 func (r *Release) Status() crv1alpha1.ChartMgrState {
-	if r.rls == nil {
+	if r.rls == nil || r.rls.Info == nil || r.rls.Info.Status == nil {
 		return crv1alpha1.ChartMgrStateUnknown
 	}
 	return statusCodeToName(r.rls.Info.Status.Code)

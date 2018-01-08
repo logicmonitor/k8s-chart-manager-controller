@@ -15,23 +15,15 @@ func CreateOrUpdateChartMgr(chartmgr *crv1alpha1.ChartManager, client *lmhelm.Cl
 
 	err := removeMismatchedReleases(chartmgr, rls)
 	if err != nil {
-		return nil, err
+		return rls, err
 	}
 
 	if rls.Exists() {
 		log.Infof("Release %s found. Updating.", rls.Name())
-		err = rls.Update()
-		if err != nil {
-			return nil, err
-		}
-		return rls, err
+		return rls, rls.Update()
 	}
 	log.Infof("Release %s not found. Installing.", rls.Name())
-	err = rls.Install()
-	if err != nil {
-		return nil, err
-	}
-	return rls, err
+	return rls, rls.Install()
 }
 
 // DeleteChartMgr deletes a Chart Manager
@@ -40,11 +32,7 @@ func DeleteChartMgr(chartmgr *crv1alpha1.ChartManager, client *lmhelm.Client) (*
 		Client:   client,
 		Chartmgr: chartmgr,
 	}
-	err := rls.Delete()
-	if err != nil {
-		return nil, err
-	}
-	return rls, err
+	return rls, rls.Delete()
 }
 
 func removeMismatchedReleases(chartmgr *crv1alpha1.ChartManager, rls *lmhelm.Release) error {
