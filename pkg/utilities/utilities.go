@@ -18,3 +18,8 @@ func EnsureDirectory(dir string) error {
 	}
 	return nil
 }
+
+// I64ToPI64 returns the passed int as a pointer
+func I64ToPI64(i int64) *int64 {
+	return &i
+}
