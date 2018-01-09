@@ -35,7 +35,7 @@ func (r *Release) helmInstall(chart *chart.Chart, vals []byte) error {
 	log.Infof("Installing release %s", r.Name())
 	rsp, err := r.Client.Helm.InstallReleaseFromChart(chart, r.Chartmgr.ObjectMeta.Namespace, installOpts(r, vals)...)
 	if rsp == nil || rsp.Release == nil {
-		rls, _ := r.getInstalledRelease()
+		rls, _ := getInstalledRelease(r)
 		if rls != nil {
 			r.rls = rls
 		}
@@ -68,7 +68,7 @@ func (r *Release) helmUpdate(chart *chart.Chart, vals []byte) error {
 	log.Infof("Updating release %s", r.Name())
 	rsp, err := r.Client.Helm.UpdateReleaseFromChart(r.Name(), chart, updateOpts(r, vals)...)
 	if rsp == nil || rsp.Release == nil {
-		rls, _ := r.getInstalledRelease()
+		rls, _ := getInstalledRelease(r)
 		if rls != nil {
 			r.rls = rls
 		}
@@ -97,7 +97,7 @@ func (r *Release) helmDelete() error {
 	log.Infof("Deleting release %s", r.Name())
 	rsp, err := r.Client.Helm.DeleteRelease(r.Name(), deleteOpts(r)...)
 	if rsp == nil || rsp.Release == nil {
-		rls, _ := r.getInstalledRelease()
+		rls, _ := getInstalledRelease(r)
 		if rls != nil {
 			r.rls = rls
 		}
@@ -181,7 +181,7 @@ func (r *Release) Name() string {
 
 // Exists indicates whether or not the release exists in-cluster
 func (r *Release) Exists() bool {
-	rls, err := r.getInstalledRelease()
+	rls, err := getInstalledRelease(r)
 	if err != nil {
 		log.Errorf("%v", err)
 		return false
@@ -190,21 +190,4 @@ func (r *Release) Exists() bool {
 		return false
 	}
 	return true
-}
-
-func (r *Release) getInstalledRelease() (*rspb.Release, error) {
-	// try to list the release and determine if it already exists
-	log.Debugf("Attempting to locate helm release with filter %s", r.Name())
-	rsp, err := r.Client.Helm.ListReleases(listOpts(r)...)
-	if err != nil {
-		return nil, err
-	}
-
-	if rsp.Count < 1 {
-		return nil, nil
-	} else if rsp.Count > 1 {
-		return nil, fmt.Errorf("multiple releases found for this Chart Manager")
-	}
-	log.Debugf("Found helm release matching filter %s", r.Name())
-	return rsp.Releases[0], nil
 }

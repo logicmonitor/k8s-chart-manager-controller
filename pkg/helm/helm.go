@@ -10,6 +10,7 @@ import (
 	"k8s.io/helm/pkg/helm"
 	helm_env "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/portforwarder"
+	rspb "k8s.io/helm/pkg/proto/hapi/release"
 )
 
 // Client represents the LM helm client wrapper
@@ -93,4 +94,21 @@ func (c *Client) getHelmSettings() helm_env.EnvSettings {
 	settings.TillerHost = c.chartmgrconfig.TillerHost
 	settings.TillerNamespace = c.chartmgrconfig.TillerNamespace
 	return settings
+}
+
+func getInstalledRelease(r *Release) (*rspb.Release, error) {
+	// try to list the release and determine if it already exists
+	log.Debugf("Attempting to locate helm release with filter %s", r.Name())
+	rsp, err := r.Client.Helm.ListReleases(listOpts(r)...)
+	if err != nil {
+		return nil, err
+	}
+
+	if rsp.Count < 1 {
+		return nil, nil
+	} else if rsp.Count > 1 {
+		return nil, fmt.Errorf("multiple releases found for this Chart Manager")
+	}
+	log.Debugf("Found helm release matching filter %s", r.Name())
+	return rsp.Releases[0], nil
 }
