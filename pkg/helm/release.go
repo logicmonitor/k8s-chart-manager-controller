@@ -143,6 +143,9 @@ func createOnly(chartmgr *crv1alpha1.ChartManager) bool {
 
 // Deployed indicates whether or not the release is successfully deployed
 func (r *Release) Deployed() bool {
+	if r.rls == nil || r.rls.Info == nil || r.rls.Info.Status == nil {
+		return false
+	}
 	return r.rls.Info.Status.Code == rspb.Status_DEPLOYED
 }
 
