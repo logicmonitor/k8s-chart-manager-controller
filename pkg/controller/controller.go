@@ -149,11 +149,11 @@ func (c *Controller) setStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm.Re
 func (c *Controller) updateStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm.Release) error {
 	err := c.waitForReleaseToDeploy(rls)
 	if err != nil {
-		log.Errorf("Failed to verify that release %v deployed: %v", rls.Name, err)
+		log.Errorf("Failed to verify that release %v deployed: %v", rls.Name(), err)
 		c.updateChartMgrStatus(chartmgr, rls, err.Error())
 	} else {
-		log.Infof("Chart Manager %s has deployed release %s", chartmgr.Name, string(rls.Status()))
-		c.updateChartMgrStatus(chartmgr, rls, err.Error())
+		log.Infof("Chart Manager %s has deployed release %s", chartmgr.Name, rls.Name())
+		c.updateChartMgrStatus(chartmgr, rls, string(rls.Status()))
 	}
 	return err
 }
