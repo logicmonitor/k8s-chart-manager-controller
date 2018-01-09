@@ -10,8 +10,6 @@ import (
 	"k8s.io/helm/pkg/helm"
 	helm_env "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/portforwarder"
-	rspb "k8s.io/helm/pkg/proto/hapi/release"
-	"k8s.io/helm/pkg/proto/hapi/services"
 )
 
 // Client represents the LM helm client wrapper
@@ -95,37 +93,4 @@ func (c *Client) getHelmSettings() helm_env.EnvSettings {
 	settings.TillerHost = c.chartmgrconfig.TillerHost
 	settings.TillerNamespace = c.chartmgrconfig.TillerNamespace
 	return settings
-}
-
-func parseReleaseFromResponse(r *Release, v interface{}) *rspb.Release {
-	rls := getReleaseFromMessage(v)
-	if v == nil || rls == nil {
-		rls, _ := r.getInstalledRelease()
-		if rls != nil {
-			return rls
-		}
-	} else {
-		return rls
-	}
-	return nil
-}
-
-func getReleaseFromMessage(v interface{}) *rspb.Release {
-	if v == nil {
-		return nil
-	}
-
-	switch v.(type) {
-	case *services.InstallReleaseResponse:
-		m := v.(*services.InstallReleaseResponse)
-		return m.Release
-	case *services.UpdateReleaseResponse:
-		m := v.(*services.UpdateReleaseResponse)
-		return m.Release
-	case *services.UninstallReleaseResponse:
-		m := v.(*services.UninstallReleaseResponse)
-		return m.Release
-	default:
-		return nil
-	}
 }
