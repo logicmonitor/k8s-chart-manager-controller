@@ -8,7 +8,7 @@ import (
 	crv1alpha1 "github.com/logicmonitor/k8s-chart-manager-controller/pkg/apis/v1alpha1"
 	chartmgrclient "github.com/logicmonitor/k8s-chart-manager-controller/pkg/client"
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/config"
-	lmhelm "github.com/logicmonitor/k8s-chart-manager-controller/pkg/helm"
+	lmhelm "github.com/logicmonitor/k8s-chart-manager-controller/pkg/lmhelm"
 	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -93,80 +93,84 @@ func (c *Controller) manage(ctx context.Context) error {
 }
 
 func (c *Controller) addFunc(obj interface{}) {
-	chartmgr := obj.(*crv1alpha1.ChartManager)
-	rls, err := CreateOrUpdateChartMgr(chartmgr, c.HelmClient)
-	if err != nil {
-		log.Errorf("%s", err)
-		c.updateChartMgrStatus(chartmgr, rls, err.Error())
-		return
-	}
+	go func(obj interface{}) {
+		chartmgr := obj.(*crv1alpha1.ChartManager)
+		rls, err := CreateOrUpdateChartMgr(chartmgr, c.HelmClient)
+		if err != nil {
+			log.Errorf("%s", err)
+			c.updateChartMgrStatus(chartmgr, rls, err.Error())
+			return
+		}
 
-	err = c.setStatus(chartmgr, rls)
-	if err != nil {
-		return
-	}
-	log.Infof("Chart Manager %s status is %s", chartmgr.Name, chartmgr.Status.State)
-	log.Infof("Created Chart Manager: %s", chartmgr.Name)
+		err = c.updateStatus(chartmgr, rls)
+		if err != nil {
+			return
+		}
+		log.Infof("Chart Manager %s status is %s", chartmgr.Name, chartmgr.Status.State)
+		log.Infof("Created Chart Manager: %s", chartmgr.Name)
+	}(obj)
 }
 
 func (c *Controller) updateFunc(oldObj, newObj interface{}) {
-	_ = oldObj.(*crv1alpha1.ChartManager)
-	newChartMgr := newObj.(*crv1alpha1.ChartManager)
+	go func(oldObj interface{}, newObj interface{}) {
+		chartmgr := oldObj.(*crv1alpha1.ChartManager)
+		newChartMgr := newObj.(*crv1alpha1.ChartManager)
 
-	rls, err := CreateOrUpdateChartMgr(newChartMgr, c.HelmClient)
-	if err != nil {
-		log.Errorf("%s", err)
-		c.updateChartMgrStatus(newChartMgr, rls, err.Error())
-		return
-	}
+		// don't process updates if the only change was the status
+		if chartmgr.Status == newChartMgr.Status {
+			return
+		}
 
-	err = c.setStatus(newChartMgr, rls)
-	if err != nil {
-		return
-	}
-	log.Infof("Updated Chart Manager: %s", newChartMgr.Name)
+		rls, err := CreateOrUpdateChartMgr(newChartMgr, c.HelmClient)
+		if err != nil {
+			log.Errorf("%s", err)
+			c.updateChartMgrStatus(newChartMgr, rls, err.Error())
+			return
+		}
+
+		err = c.updateStatus(newChartMgr, rls)
+		if err != nil {
+			return
+		}
+		log.Infof("Updated Chart Manager: %s", newChartMgr.Name)
+	}(oldObj, newObj)
 }
 
 func (c *Controller) deleteFunc(obj interface{}) {
-	chartmgr := obj.(*crv1alpha1.ChartManager)
+	go func(obj interface{}) {
+		chartmgr := obj.(*crv1alpha1.ChartManager)
 
-	_, err := DeleteChartMgr(chartmgr, c.HelmClient)
-	if err != nil {
-		log.Errorf("Failed to delete Chart Manager: %v", err)
-		return
-	}
-	log.Infof("Deleted Chart Manager: %s", chartmgr.Name)
-}
-
-func (c *Controller) setStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm.Release) error {
-	//set the initial status
-	c.updateChartMgrStatus(chartmgr, rls, string(rls.Status()))
-
-	// wait for the final status
-	return c.updateStatus(chartmgr, rls)
+		_, err := DeleteChartMgr(chartmgr, c.HelmClient)
+		if err != nil {
+			log.Errorf("Failed to delete Chart Manager: %v", err)
+			return
+		}
+		log.Infof("Deleted Chart Manager: %s", chartmgr.Name)
+	}(obj)
 }
 
 func (c *Controller) updateStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm.Release) error {
 	err := c.waitForReleaseToDeploy(rls)
 	if err != nil {
-		log.Errorf("Failed to verify that release %v deployed: %v", rls.Name, err)
+		log.Errorf("Failed to verify that release %v deployed: %v", rls.Name(), err)
 		c.updateChartMgrStatus(chartmgr, rls, err.Error())
 	} else {
-		log.Infof("Chart Manager %s has deployed release %s", chartmgr.Name, string(rls.Status()))
-		c.updateChartMgrStatus(chartmgr, rls, err.Error())
+		log.Infof("Chart Manager %s has deployed release %s", chartmgr.Name, rls.Name())
+		c.updateChartMgrStatus(chartmgr, rls, string(rls.Status()))
 	}
 	return err
 }
 
 func (c *Controller) updateChartMgrStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm.Release, message string) {
 	log.Debugf("Updating Chart Manager status: state=%s release=%s", rls.Status(), rls.Name())
-	chartmgr.Status = crv1alpha1.ChartMgrStatus{
+	chartmgrCopy := chartmgr.DeepCopy()
+	chartmgrCopy.Status = crv1alpha1.ChartMgrStatus{
 		State:       rls.Status(),
 		ReleaseName: rls.Name(),
 		Message:     message,
 	}
 
-	err := c.put(chartmgr)
+	err := c.put(chartmgrCopy)
 
 	if err != nil {
 		log.Errorf("Failed to update status: %v", err)

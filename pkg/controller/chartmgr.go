@@ -2,7 +2,7 @@ package controller
 
 import (
 	crv1alpha1 "github.com/logicmonitor/k8s-chart-manager-controller/pkg/apis/v1alpha1"
-	lmhelm "github.com/logicmonitor/k8s-chart-manager-controller/pkg/helm"
+	lmhelm "github.com/logicmonitor/k8s-chart-manager-controller/pkg/lmhelm"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -40,7 +40,7 @@ func removeMismatchedReleases(chartmgr *crv1alpha1.ChartManager, rls *lmhelm.Rel
 	// what the chartmgr thinks the name should be. this is bad.
 	// we should attempt to delete the release currently associated
 	// with the chartmgr.
-	if resourceReleaseName(chartmgr) == rls.Name() {
+	if resourceReleaseName(chartmgr) != "" && resourceReleaseName(chartmgr) != rls.Name() {
 		log.Warnf("Calculated release name %q does not match stored release %q", rls.Name(), resourceReleaseName(chartmgr))
 		return rls.Delete()
 	}
