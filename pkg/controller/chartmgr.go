@@ -2,7 +2,7 @@ package controller
 
 import (
 	crv1alpha1 "github.com/logicmonitor/k8s-chart-manager-controller/pkg/apis/v1alpha1"
-	lmhelm "github.com/logicmonitor/k8s-chart-manager-controller/pkg/helm"
+	lmhelm "github.com/logicmonitor/k8s-chart-manager-controller/pkg/lmhelm"
 	log "github.com/sirupsen/logrus"
 )
 

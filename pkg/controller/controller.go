@@ -8,7 +8,7 @@ import (
 	crv1alpha1 "github.com/logicmonitor/k8s-chart-manager-controller/pkg/apis/v1alpha1"
 	chartmgrclient "github.com/logicmonitor/k8s-chart-manager-controller/pkg/client"
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/config"
-	lmhelm "github.com/logicmonitor/k8s-chart-manager-controller/pkg/helm"
+	lmhelm "github.com/logicmonitor/k8s-chart-manager-controller/pkg/lmhelm"
 	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
