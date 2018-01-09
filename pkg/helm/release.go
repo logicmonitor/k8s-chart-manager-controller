@@ -34,7 +34,6 @@ func (r *Release) Install() error {
 func (r *Release) helmInstall(chart *chart.Chart, vals []byte) error {
 	log.Infof("Installing release %s", r.Name())
 	rsp, err := r.Client.Helm.InstallReleaseFromChart(chart, r.Chartmgr.ObjectMeta.Namespace, installOpts(r, vals)...)
-	rls := parseReleaseFromResponse(r, rsp)
 	if rsp == nil || rsp.Release == nil {
 		rls, _ := r.getInstalledRelease()
 		if rls != nil {
@@ -68,7 +67,6 @@ func (r *Release) Update() error {
 func (r *Release) helmUpdate(chart *chart.Chart, vals []byte) error {
 	log.Infof("Updating release %s", r.Name())
 	rsp, err := r.Client.Helm.UpdateReleaseFromChart(r.Name(), chart, updateOpts(r, vals)...)
-	rls := parseReleaseFromResponse(r, rsp)
 	if rsp == nil || rsp.Release == nil {
 		rls, _ := r.getInstalledRelease()
 		if rls != nil {
