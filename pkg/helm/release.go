@@ -34,13 +34,10 @@ func (r *Release) Install() error {
 func (r *Release) helmInstall(chart *chart.Chart, vals []byte) error {
 	log.Infof("Installing release %s", r.Name())
 	rsp, err := r.Client.Helm.InstallReleaseFromChart(chart, r.Chartmgr.ObjectMeta.Namespace, installOpts(r, vals)...)
-	if rsp == nil || rsp.Release == nil {
-		rls, _ := r.getInstalledRelease()
-		if rls != nil {
-			r.rls = rls
-		}
-	} else {
-		r.rls = rsp.Release
+	rls := parseReleaseFromResponse(r, rsp)
+	if rls != nil {
+		r.rls = rls
+		return nil
 	}
 	return err
 }
@@ -67,13 +64,10 @@ func (r *Release) Update() error {
 func (r *Release) helmUpdate(chart *chart.Chart, vals []byte) error {
 	log.Infof("Updating release %s", r.Name())
 	rsp, err := r.Client.Helm.UpdateReleaseFromChart(r.Name(), chart, updateOpts(r, vals)...)
-	if rsp == nil || rsp.Release == nil {
-		rls, _ := r.getInstalledRelease()
-		if rls != nil {
-			r.rls = rls
-		}
-	} else {
-		r.rls = rsp.Release
+	rls := parseReleaseFromResponse(r, rsp)
+	if rls != nil {
+		r.rls = rls
+		return nil
 	}
 	return err
 }
@@ -96,13 +90,10 @@ func (r *Release) Delete() error {
 func (r *Release) helmDelete() error {
 	log.Infof("Deleting release %s", r.Name())
 	rsp, err := r.Client.Helm.DeleteRelease(r.Name(), deleteOpts(r)...)
-	if rsp == nil || rsp.Release == nil {
-		rls, _ := r.getInstalledRelease()
-		if rls != nil {
-			r.rls = rls
-		}
-	} else {
-		r.rls = rsp.Release
+	rls := parseReleaseFromResponse(r, rsp)
+	if rls != nil {
+		r.rls = rls
+		return nil
 	}
 	return err
 }
