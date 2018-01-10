@@ -52,6 +52,7 @@ func (r *Release) Update() error {
 		return nil
 	}
 
+	log.Infof("Updating release %s", r.Name())
 	chart, err := getChart(r.Chartmgr, r.Client.HelmSettings())
 	if err != nil {
 		return err

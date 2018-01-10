@@ -155,7 +155,7 @@ func (c *Controller) updateStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm
 		log.Errorf("Failed to verify that release %v deployed: %v", rls.Name(), err)
 		c.updateChartMgrStatus(chartmgr, rls, err.Error())
 	} else {
-		log.Infof("Chart Manager %s has deployed release %s", chartmgr.Name, rls.Name())
+		log.Infof("Chart Manager %s release %s status is Deployed", chartmgr.Name, rls.Name())
 		c.updateChartMgrStatus(chartmgr, rls, string(rls.Status()))
 	}
 	return err
