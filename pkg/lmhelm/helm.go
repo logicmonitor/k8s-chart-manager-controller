@@ -10,6 +10,7 @@ import (
 	"k8s.io/helm/pkg/helm"
 	helm_env "k8s.io/helm/pkg/helm/environment"
 	"k8s.io/helm/pkg/helm/portforwarder"
+	"k8s.io/helm/pkg/proto/hapi/chart"
 	rspb "k8s.io/helm/pkg/proto/hapi/release"
 )
 
@@ -111,4 +112,46 @@ func getInstalledRelease(r *Release) (*rspb.Release, error) {
 	}
 	log.Debugf("Found helm release %s", r.Name())
 	return rsp.Releases[0], nil
+}
+
+func (r *Release) helmInstall(r *Release, chart *chart.Chart, vals []byte) error {
+	log.Infof("Installing release %s", r.Name())
+	rsp, err := r.Client.Helm.InstallReleaseFromChart(chart, r.Chartmgr.ObjectMeta.Namespace, installOpts(r, vals)...)
+	if rsp == nil || rsp.Release == nil {
+		rls, _ := getInstalledRelease(r)
+		if rls != nil {
+			r.rls = rls
+		}
+	} else {
+		r.rls = rsp.Release
+	}
+	return err
+}
+
+func (r *Release) helmUpdate(r *Release, chart *chart.Chart, vals []byte) error {
+	log.Infof("Updating release %s", r.Name())
+	rsp, err := r.Client.Helm.UpdateReleaseFromChart(r.Name(), chart, updateOpts(r, vals)...)
+	if rsp == nil || rsp.Release == nil {
+		rls, _ := getInstalledRelease(r)
+		if rls != nil {
+			r.rls = rls
+		}
+	} else {
+		r.rls = rsp.Release
+	}
+	return err
+}
+
+func (r *Release) helmDelete(r *Release) error {
+	log.Infof("Deleting release %s", r.Name())
+	rsp, err := r.Client.Helm.DeleteRelease(r.Name(), deleteOpts(r)...)
+	if rsp == nil || rsp.Release == nil {
+		rls, _ := getInstalledRelease(r)
+		if rls != nil {
+			r.rls = rls
+		}
+	} else {
+		r.rls = rsp.Release
+	}
+	return err
 }
