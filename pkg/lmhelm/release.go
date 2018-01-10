@@ -22,12 +22,15 @@ func (r *Release) Install() error {
 	if err != nil {
 		return err
 	}
-
 	vals, err := parseValues(r.Chartmgr)
 	if err != nil {
 		return err
 	}
-	return helmInstall(r, chart, vals)
+	rls, err := helmInstall(r, chart, vals)
+	if rls != nil {
+		r.rls = rls
+	}
+	return err
 }
 
 // Update the release
@@ -42,12 +45,15 @@ func (r *Release) Update() error {
 	if err != nil {
 		return err
 	}
-
 	vals, err := parseValues(r.Chartmgr)
 	if err != nil {
 		return err
 	}
-	return helmUpdate(r, chart, vals)
+	rls, err := helmUpdate(r, chart, vals)
+	if rls != nil {
+		r.rls = rls
+	}
+	return err
 }
 
 // Delete the release
@@ -56,13 +62,16 @@ func (r *Release) Delete() error {
 		log.Infof("CreateOnly mode. Ignoring delete of release %s.", r.Name())
 		return nil
 	}
-
 	// if the release doesn't exist, our job here is done
 	if r.Name() == "" || !r.Exists() {
 		log.Infof("Can't delete release %s because it doesn't exist", r.Name())
 		return nil
 	}
-	return helmDelete(r)
+	rls, err := helmDelete(r)
+	if rls != nil {
+		r.rls = rls
+	}
+	return err
 }
 
 // Status returns the name of the release status
