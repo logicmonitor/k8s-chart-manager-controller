@@ -150,6 +150,7 @@ func statusCodeToName(code rspb.Status_Code) crv1alpha1.ChartMgrState {
 	}
 }
 
+// CreateOnly returns true of the chart manager CreateOnly option is set
 func CreateOnly(chartmgr *crv1alpha1.ChartManager) bool {
 	if chartmgr.Spec.Options != nil && chartmgr.Spec.Options.CreateOnly {
 		return true
