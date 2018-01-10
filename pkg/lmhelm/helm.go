@@ -114,7 +114,7 @@ func getInstalledRelease(r *Release) (*rspb.Release, error) {
 	return rsp.Releases[0], nil
 }
 
-func (r *Release) helmInstall(r *Release, chart *chart.Chart, vals []byte) error {
+func helmInstall(r *Release, chart *chart.Chart, vals []byte) error {
 	log.Infof("Installing release %s", r.Name())
 	rsp, err := r.Client.Helm.InstallReleaseFromChart(chart, r.Chartmgr.ObjectMeta.Namespace, installOpts(r, vals)...)
 	if rsp == nil || rsp.Release == nil {
@@ -128,7 +128,7 @@ func (r *Release) helmInstall(r *Release, chart *chart.Chart, vals []byte) error
 	return err
 }
 
-func (r *Release) helmUpdate(r *Release, chart *chart.Chart, vals []byte) error {
+func helmUpdate(r *Release, chart *chart.Chart, vals []byte) error {
 	log.Infof("Updating release %s", r.Name())
 	rsp, err := r.Client.Helm.UpdateReleaseFromChart(r.Name(), chart, updateOpts(r, vals)...)
 	if rsp == nil || rsp.Release == nil {
@@ -142,7 +142,7 @@ func (r *Release) helmUpdate(r *Release, chart *chart.Chart, vals []byte) error 
 	return err
 }
 
-func (r *Release) helmDelete(r *Release) error {
+func helmDelete(r *Release) error {
 	log.Infof("Deleting release %s", r.Name())
 	rsp, err := r.Client.Helm.DeleteRelease(r.Name(), deleteOpts(r)...)
 	if rsp == nil || rsp.Release == nil {
