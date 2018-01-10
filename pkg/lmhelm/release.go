@@ -27,7 +27,7 @@ func (r *Release) Install() error {
 	if err != nil {
 		return err
 	}
-	return r.helmInstall(r, chart, vals)
+	return helmInstall(r, chart, vals)
 }
 
 // Update the release
@@ -47,7 +47,7 @@ func (r *Release) Update() error {
 	if err != nil {
 		return err
 	}
-	return r.helmUpdate(r, chart, vals)
+	return helmUpdate(r, chart, vals)
 }
 
 // Delete the release
@@ -62,7 +62,7 @@ func (r *Release) Delete() error {
 		log.Infof("Can't delete release %s because it doesn't exist", r.Name())
 		return nil
 	}
-	return r.helmDelete(r)
+	return helmDelete(r)
 }
 
 // Status returns the name of the release status
