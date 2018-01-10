@@ -106,7 +106,7 @@ func (c *Controller) addFunc(obj interface{}) {
 		if err != nil {
 			return
 		}
-		log.Infof("Chart Manager %s status is %s", chartmgr.Name, chartmgr.Status.State)
+		log.Infof("Chart Manager %s status is %s", chartmgr.Name, rls.Status())
 		log.Infof("Created Chart Manager: %s", chartmgr.Name)
 	}(obj)
 }
@@ -195,6 +195,7 @@ func (c *Controller) waitForReleaseToDeploy(rls *lmhelm.Release) error {
 		case <-timeout:
 			return errors.New("Timed out waiting for release to deploy")
 		default:
+			log.Debugf("Checking status of release %s", rls.Name())
 			if rls.Deployed() {
 				return nil
 			}
