@@ -113,18 +113,18 @@ func (c *Controller) addFunc(obj interface{}) {
 
 func (c *Controller) updateFunc(oldObj, newObj interface{}) {
 	go func(oldObj interface{}, newObj interface{}) {
-		chartmgr := oldObj.(*crv1alpha1.ChartManager)
+		_ = oldObj.(*crv1alpha1.ChartManager)
 		newChartMgr := newObj.(*crv1alpha1.ChartManager)
-
-		// don't process updates if the only change was the status
-		if chartmgr.Status == newChartMgr.Status {
-			return
-		}
 
 		rls, err := CreateOrUpdateChartMgr(newChartMgr, c.HelmClient)
 		if err != nil {
 			log.Errorf("%s", err)
 			c.updateChartMgrStatus(newChartMgr, rls, err.Error())
+			return
+		}
+
+		if lmhelm.CreateOnly(newChartMgr) {
+			log.Infof("CreateOnly mode. Ignoring update of chart manager %s.", newChartMgr.Name)
 			return
 		}
 
@@ -171,7 +171,6 @@ func (c *Controller) updateChartMgrStatus(chartmgr *crv1alpha1.ChartManager, rls
 	}
 
 	err := c.put(chartmgrCopy)
-
 	if err != nil {
 		log.Errorf("Failed to update status: %v", err)
 	}

@@ -47,7 +47,7 @@ func (r *Release) helmInstall(chart *chart.Chart, vals []byte) error {
 
 // Update the release
 func (r *Release) Update() error {
-	if createOnly(r.Chartmgr) {
+	if CreateOnly(r.Chartmgr) {
 		log.Infof("CreateOnly mode. Ignoring update of release %s.", r.Name())
 		return nil
 	}
@@ -81,7 +81,7 @@ func (r *Release) helmUpdate(chart *chart.Chart, vals []byte) error {
 
 // Delete the release
 func (r *Release) Delete() error {
-	if createOnly(r.Chartmgr) {
+	if CreateOnly(r.Chartmgr) {
 		log.Infof("CreateOnly mode. Ignoring delete of release %s.", r.Name())
 		return nil
 	}
@@ -150,7 +150,7 @@ func statusCodeToName(code rspb.Status_Code) crv1alpha1.ChartMgrState {
 	}
 }
 
-func createOnly(chartmgr *crv1alpha1.ChartManager) bool {
+func CreateOnly(chartmgr *crv1alpha1.ChartManager) bool {
 	if chartmgr.Spec.Options != nil && chartmgr.Spec.Options.CreateOnly {
 		return true
 	}
@@ -159,10 +159,16 @@ func createOnly(chartmgr *crv1alpha1.ChartManager) bool {
 
 // Deployed indicates whether or not the release is successfully deployed
 func (r *Release) Deployed() bool {
-	if r.rls == nil || r.rls.Info == nil || r.rls.Info.Status == nil {
+	rls, err := getInstalledRelease(r)
+	if err != nil {
+		log.Errorf("%v", err)
 		return false
 	}
-	return r.rls.Info.Status.Code == rspb.Status_DEPLOYED
+	if rls == nil || rls.Info == nil || rls.Info.Status == nil {
+		return false
+	}
+	r.rls = rls
+	return rls.Info.Status.Code == rspb.Status_DEPLOYED
 }
 
 // Name returns the name of this release
@@ -190,5 +196,6 @@ func (r *Release) Exists() bool {
 	if rls == nil {
 		return false
 	}
+	r.rls = rls
 	return true
 }
