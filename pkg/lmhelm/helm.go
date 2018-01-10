@@ -110,7 +110,6 @@ func getInstalledRelease(r *Release) (*rspb.Release, error) {
 	} else if rsp.Count > 1 {
 		return nil, fmt.Errorf("Multiple releases found for release %s", r.Name())
 	}
-	log.Debugf("Found helm release %s", r.Name())
 	return rsp.Releases[0], nil
 }
 
