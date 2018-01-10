@@ -6,7 +6,6 @@ import (
 	crv1alpha1 "github.com/logicmonitor/k8s-chart-manager-controller/pkg/apis/v1alpha1"
 	"github.com/logicmonitor/k8s-chart-manager-controller/pkg/constants"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/helm/pkg/proto/hapi/chart"
 	rspb "k8s.io/helm/pkg/proto/hapi/release"
 )
 
@@ -28,30 +27,17 @@ func (r *Release) Install() error {
 	if err != nil {
 		return err
 	}
-	return r.helmInstall(chart, vals)
-}
-
-func (r *Release) helmInstall(chart *chart.Chart, vals []byte) error {
-	log.Infof("Installing release %s", r.Name())
-	rsp, err := r.Client.Helm.InstallReleaseFromChart(chart, r.Chartmgr.ObjectMeta.Namespace, installOpts(r, vals)...)
-	if rsp == nil || rsp.Release == nil {
-		rls, _ := getInstalledRelease(r)
-		if rls != nil {
-			r.rls = rls
-		}
-	} else {
-		r.rls = rsp.Release
-	}
-	return err
+	return helmInstall(r, chart, vals)
 }
 
 // Update the release
 func (r *Release) Update() error {
-	if createOnly(r.Chartmgr) {
+	if CreateOnly(r.Chartmgr) {
 		log.Infof("CreateOnly mode. Ignoring update of release %s.", r.Name())
 		return nil
 	}
 
+	log.Infof("Updating release %s", r.Name())
 	chart, err := getChart(r.Chartmgr, r.Client.HelmSettings())
 	if err != nil {
 		return err
@@ -61,26 +47,12 @@ func (r *Release) Update() error {
 	if err != nil {
 		return err
 	}
-	return r.helmUpdate(chart, vals)
-}
-
-func (r *Release) helmUpdate(chart *chart.Chart, vals []byte) error {
-	log.Infof("Updating release %s", r.Name())
-	rsp, err := r.Client.Helm.UpdateReleaseFromChart(r.Name(), chart, updateOpts(r, vals)...)
-	if rsp == nil || rsp.Release == nil {
-		rls, _ := getInstalledRelease(r)
-		if rls != nil {
-			r.rls = rls
-		}
-	} else {
-		r.rls = rsp.Release
-	}
-	return err
+	return helmUpdate(r, chart, vals)
 }
 
 // Delete the release
 func (r *Release) Delete() error {
-	if createOnly(r.Chartmgr) {
+	if CreateOnly(r.Chartmgr) {
 		log.Infof("CreateOnly mode. Ignoring delete of release %s.", r.Name())
 		return nil
 	}
@@ -90,21 +62,7 @@ func (r *Release) Delete() error {
 		log.Infof("Can't delete release %s because it doesn't exist", r.Name())
 		return nil
 	}
-	return r.helmDelete()
-}
-
-func (r *Release) helmDelete() error {
-	log.Infof("Deleting release %s", r.Name())
-	rsp, err := r.Client.Helm.DeleteRelease(r.Name(), deleteOpts(r)...)
-	if rsp == nil || rsp.Release == nil {
-		rls, _ := getInstalledRelease(r)
-		if rls != nil {
-			r.rls = rls
-		}
-	} else {
-		r.rls = rsp.Release
-	}
-	return err
+	return helmDelete(r)
 }
 
 // Status returns the name of the release status
@@ -113,6 +71,57 @@ func (r *Release) Status() crv1alpha1.ChartMgrState {
 		return crv1alpha1.ChartMgrStateUnknown
 	}
 	return statusCodeToName(r.rls.Info.Status.Code)
+}
+
+// CreateOnly returns true of the chart manager CreateOnly option is set
+func CreateOnly(chartmgr *crv1alpha1.ChartManager) bool {
+	if chartmgr.Spec.Options != nil && chartmgr.Spec.Options.CreateOnly {
+		return true
+	}
+	return false
+}
+
+// Deployed indicates whether or not the release is successfully deployed
+func (r *Release) Deployed() bool {
+	rls, err := getInstalledRelease(r)
+	if err != nil {
+		log.Errorf("%v", err)
+		return false
+	}
+	if rls == nil || rls.Info == nil || rls.Info.Status == nil {
+		return false
+	}
+	r.rls = rls
+	return rls.Info.Status.Code == rspb.Status_DEPLOYED
+}
+
+// Name returns the name of this release
+func (r *Release) Name() string {
+	// if the release name is explicitly set, return that
+	if r.Chartmgr.Spec.Release != nil {
+		// log.Debugf("Release name %s specified in resource definition", r.Chartmgr.Spec.Release.Name)
+		return r.Chartmgr.Spec.Release.Name
+	}
+
+	// releases created by the controller are formatted:
+	// chartmgr-rls-[chartmgr uid]
+	uid := r.Chartmgr.ObjectMeta.UID
+
+	return fmt.Sprintf("%s-%s", constants.ReleaseNamePrefix, uid)
+}
+
+// Exists indicates whether or not the release exists in-cluster
+func (r *Release) Exists() bool {
+	rls, err := getInstalledRelease(r)
+	if err != nil {
+		log.Errorf("%v", err)
+		return false
+	}
+	if rls == nil {
+		return false
+	}
+	r.rls = rls
+	return true
 }
 
 func statusCodeToName(code rspb.Status_Code) crv1alpha1.ChartMgrState {
@@ -147,47 +156,4 @@ func statusCodeToName(code rspb.Status_Code) crv1alpha1.ChartMgrState {
 		// Status_UNKNOWN indicates that a release is in an uncertain state.
 		return crv1alpha1.ChartMgrStateUnknown
 	}
-}
-
-func createOnly(chartmgr *crv1alpha1.ChartManager) bool {
-	if chartmgr.Spec.Options != nil && chartmgr.Spec.Options.CreateOnly {
-		return true
-	}
-	return false
-}
-
-// Deployed indicates whether or not the release is successfully deployed
-func (r *Release) Deployed() bool {
-	if r.rls == nil || r.rls.Info == nil || r.rls.Info.Status == nil {
-		return false
-	}
-	return r.rls.Info.Status.Code == rspb.Status_DEPLOYED
-}
-
-// Name returns the name of this release
-func (r *Release) Name() string {
-	// if the release name is explicitly set, return that
-	if r.Chartmgr.Spec.Release != nil {
-		// log.Debugf("Release name %s specified in resource definition", r.Chartmgr.Spec.Release.Name)
-		return r.Chartmgr.Spec.Release.Name
-	}
-
-	// releases created by the controller are formatted:
-	// chartmgr-rls-[chartmgr uid]
-	uid := r.Chartmgr.ObjectMeta.UID
-
-	return fmt.Sprintf("%s-%s", constants.ReleaseNamePrefix, uid)
-}
-
-// Exists indicates whether or not the release exists in-cluster
-func (r *Release) Exists() bool {
-	rls, err := getInstalledRelease(r)
-	if err != nil {
-		log.Errorf("%v", err)
-		return false
-	}
-	if rls == nil {
-		return false
-	}
-	return true
 }

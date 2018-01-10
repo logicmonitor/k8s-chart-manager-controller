@@ -113,18 +113,18 @@ func (c *Controller) addFunc(obj interface{}) {
 
 func (c *Controller) updateFunc(oldObj, newObj interface{}) {
 	go func(oldObj interface{}, newObj interface{}) {
-		chartmgr := oldObj.(*crv1alpha1.ChartManager)
+		_ = oldObj.(*crv1alpha1.ChartManager)
 		newChartMgr := newObj.(*crv1alpha1.ChartManager)
-
-		// don't process updates if the only change was the status
-		if chartmgr.Status == newChartMgr.Status {
-			return
-		}
 
 		rls, err := CreateOrUpdateChartMgr(newChartMgr, c.HelmClient)
 		if err != nil {
 			log.Errorf("%s", err)
 			c.updateChartMgrStatus(newChartMgr, rls, err.Error())
+			return
+		}
+
+		if lmhelm.CreateOnly(newChartMgr) {
+			log.Infof("CreateOnly mode. Ignoring update of chart manager %s.", newChartMgr.Name)
 			return
 		}
 
@@ -155,7 +155,7 @@ func (c *Controller) updateStatus(chartmgr *crv1alpha1.ChartManager, rls *lmhelm
 		log.Errorf("Failed to verify that release %v deployed: %v", rls.Name(), err)
 		c.updateChartMgrStatus(chartmgr, rls, err.Error())
 	} else {
-		log.Infof("Chart Manager %s has deployed release %s", chartmgr.Name, rls.Name())
+		log.Infof("Chart Manager %s release %s status is Deployed", chartmgr.Name, rls.Name())
 		c.updateChartMgrStatus(chartmgr, rls, string(rls.Status()))
 	}
 	return err
@@ -171,7 +171,6 @@ func (c *Controller) updateChartMgrStatus(chartmgr *crv1alpha1.ChartManager, rls
 	}
 
 	err := c.put(chartmgrCopy)
-
 	if err != nil {
 		log.Errorf("Failed to update status: %v", err)
 	}

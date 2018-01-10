@@ -19,10 +19,10 @@ func CreateOrUpdateChartMgr(chartmgr *crv1alpha1.ChartManager, client *lmhelm.Cl
 	}
 
 	if rls.Exists() {
-		log.Infof("Release %s found. Updating.", rls.Name())
+		log.Infof("Release %s found", rls.Name())
 		return rls, rls.Update()
 	}
-	log.Infof("Release %s not found. Installing.", rls.Name())
+	log.Infof("Release %s not found", rls.Name())
 	return rls, rls.Install()
 }
 
